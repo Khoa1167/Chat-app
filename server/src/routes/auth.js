@@ -5,6 +5,7 @@ const User        = require('../models/User');
 const PendingUser = require('../models/PendingUser');
 const { protect } = require('../middleware/auth');
 const { sendOTPEmail } = require('../config/mailer');
+const { uploadAvatar } = require('../config/cloudinary');
 
 const genToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
@@ -177,5 +178,99 @@ router.post('/login', async (req, res) => {
 
 // ─── GET /api/auth/me ─────────────────────────────────────────────────────
 router.get('/me', protect, (req, res) => res.json(req.user));
+
+// ─── PUT /api/auth/profile — cập nhật thông tin cá nhân ──────────────────
+router.put('/profile', protect, async (req, res) => {
+  try {
+    const { nickname, email, phone } = req.body;
+    const updates = {};
+
+    if (nickname && nickname !== req.user.nickname) {
+      if (nickname.trim().length < 2)
+        return res.status(400).json({ message: 'Nickname phải có ít nhất 2 ký tự' });
+
+      // Kiểm tra 7 ngày
+      if (req.user.nicknameChangedAt) {
+        const daysSinceChange = (Date.now() - new Date(req.user.nicknameChangedAt)) / (1000 * 60 * 60 * 24);
+        if (daysSinceChange < 7) {
+          const daysLeft = Math.ceil(7 - daysSinceChange);
+          return res.status(400).json({
+            message: `Bạn chỉ có thể đổi tên hiển thị sau ${daysLeft} ngày nữa`
+          });
+        }
+      }
+
+      const exists = await User.findOne({ nickname, _id: { $ne: req.user._id } });
+      if (exists)
+        return res.status(400).json({ message: 'Tên hiển thị đã tồn tại' });
+
+      updates.nickname = nickname;
+      updates.nicknameChangedAt = new Date();
+    }
+
+    if (email && email !== req.user.email) {
+      const exists = await User.findOne({ email, _id: { $ne: req.user._id } });
+      if (exists)
+        return res.status(400).json({ message: 'Email đã được sử dụng' });
+      updates.email = email;
+    }
+
+    if (phone !== undefined) {
+      updates.phone = phone;
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id, updates, { returnDocument: 'after' }
+    );
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── PUT /api/auth/change-password — đổi mật khẩu ─────────────────────────
+router.put('/change-password', protect, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+
+    if (!currentPassword || !newPassword)
+      return res.status(400).json({ message: 'Vui lòng nhập đầy đủ thông tin' });
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+
+    const user = await User.findById(req.user._id);
+    const isMatch = await user.comparePassword(currentPassword);
+    if (!isMatch)
+      return res.status(401).json({ message: 'Mật khẩu hiện tại không đúng' });
+
+    user.password = newPassword; // sẽ tự hash qua pre('save')
+    await user.save();
+
+    res.json({ message: 'Đổi mật khẩu thành công' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── POST /api/auth/avatar — upload avatar ────────────────────────────────
+router.post('/avatar', protect, uploadAvatar.single('avatar'), async (req, res) => {
+  try {
+    if (!req.file)
+      return res.status(400).json({ message: 'Không có file ảnh' });
+
+    const avatarUrl = req.file.path; // Cloudinary trả về URL trong path
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { avatar: avatarUrl },
+      { new: true }
+    );
+
+    res.json(user);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 module.exports = router;
