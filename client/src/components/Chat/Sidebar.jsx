@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
 import api from '../../services/api';
+import ProfileModal from '../Profile/ProfileModal';
 
 // Lấy thông tin người đang chat cùng trong phòng DM
 const getDMPartner = (room, currentUser) => {
@@ -18,6 +19,7 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
   const [newRoomName, setNewRoomName] = useState('');
   const [showJoin, setShowJoin] = useState(false);
   const [allRooms, setAllRooms] = useState([]);
+  const [showProfile, setShowProfile] = useState(false);
 
   // Load danh sách phòng của user
   useEffect(() => {
@@ -127,12 +129,18 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
     <div className="sidebar">
       {/* Header */}
       <div className="sidebar-header">
-        <div className="user-info">
-          <div className="avatar">{(user.nickname || user.username)[0].toUpperCase()}</div>
+        <div className="user-info" onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
+          {user.avatar ? (
+            <img src={user.avatar} alt="avatar" className="avatar-img" />
+          ) : (
+            <div className="avatar">{(user.nickname || user.username)[0].toUpperCase()}</div>
+          )}
           <span>{user.nickname || user.username}</span>
         </div>
         <button onClick={logout} className="logout-btn" title="Đăng xuất">⏻</button>
       </div>
+
+  {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
 
       {/* Danh sách phòng */}
       <div className="sidebar-section">

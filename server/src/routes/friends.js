@@ -117,6 +117,21 @@ router.put('/accept/:friendshipId', protect, async (req, res) => {
     await friendship.populate('sender', 'username nickname avatar isOnline');
     await friendship.populate('receiver', 'username nickname avatar isOnline');
 
+    // Phát sự kiện room:added cho cả hai người dùng đang online (Sửa lỗi Real-time DM room)
+    const io = req.app.get('socketio');
+    if (io) {
+      const allSockets = await io.fetchSockets();
+      const memberIds = [friendship.sender._id.toString(), friendship.receiver._id.toString()];
+      const populatedDmRoom = await Room.findById(dmRoom._id).populate('members', 'username nickname avatar isOnline');
+      
+      allSockets.forEach(s => {
+        if (s.user && memberIds.includes(s.user._id.toString())) {
+          s.join(dmRoom._id.toString());
+          s.emit('room:added', populatedDmRoom);
+        }
+      });
+    }
+
     res.json({ friendship, dmRoom });
   } catch (err) {
     res.status(500).json({ message: err.message });

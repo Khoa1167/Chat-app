@@ -16,7 +16,19 @@ const friendshipSchema = new mongoose.Schema({
     enum: ['pending', 'accepted', 'rejected'],
     default: 'pending',
   },
+  combinationKey: {
+    type: String,
+    unique: true,
+  }
 }, { timestamps: true });
+
+// Pre-save hook để tạo combinationKey duy nhất cho cặp sender-receiver
+friendshipSchema.pre('save', function() {
+  if (this.sender && this.receiver) {
+    const ids = [this.sender.toString(), this.receiver.toString()].sort();
+    this.combinationKey = ids.join('_');
+  }
+});
 
 // Đảm bảo không có 2 record trùng sender + receiver
 friendshipSchema.index({ sender: 1, receiver: 1 }, { unique: true });

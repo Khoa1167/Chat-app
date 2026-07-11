@@ -20,22 +20,14 @@ export default function ChatWindow({ room }) {
   const [replyTo, setReplyTo]         = useState(null);
   const [page, setPage]               = useState(1);
   const [hasMore, setHasMore]         = useState(true);
-  const [dmPartnerOnline, setDmPartnerOnline] = useState(false);
+  const [dmPartnerOnline, setDmPartnerOnline] = useState(
+    () => getDMPartner(room, user)?.isOnline || false
+  );
   const bottomRef = useRef(null);
-
-  // Khởi tạo trạng thái online của DM partner
-  useEffect(() => {
-    const partner = getDMPartner(room, user);
-    setDmPartnerOnline(partner?.isOnline || false);
-  }, [room?._id]);
 
   // Load tin nhắn khi chọn phòng mới
   useEffect(() => {
     if (!room) return;
-    setMessages([]);
-    setPage(1);
-    setHasMore(true);
-    setReplyTo(null);
 
     api.get(`/rooms/${room._id}/messages?page=1&limit=30`)
       .then(res => {
@@ -43,7 +35,7 @@ export default function ChatWindow({ room }) {
         setHasMore(res.data.length === 30);
         setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
       });
-  }, [room?._id]);
+  }, [room, user]);
 
   // Lắng nghe các sự kiện WebSocket
   useEffect(() => {
@@ -101,15 +93,15 @@ export default function ChatWindow({ room }) {
       offTypingStart(); offTypingStop();
       offOnline(); offOffline();
     };
-  }, [room?._id, on, emit, user._id]);
+  }, [room, user, on, emit]);
 
   const handleSend = useCallback((content, replyToId) => {
-    emit('message:send', { roomId: room._id, content, replyTo: replyToId });
+    emit('message:send', { roomId: room?._id, content, replyTo: replyToId });
     setReplyTo(null);
   }, [emit, room?._id]);
 
   const handleTyping = useCallback((isTyping) => {
-    emit(isTyping ? 'typing:start' : 'typing:stop', { roomId: room._id });
+    emit(isTyping ? 'typing:start' : 'typing:stop', { roomId: room?._id });
   }, [emit, room?._id]);
 
   const handleReact = useCallback((messageId, emoji) => {

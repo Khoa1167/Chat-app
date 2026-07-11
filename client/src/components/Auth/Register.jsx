@@ -16,19 +16,33 @@ export default function Register() {
 
   // Kiểm tra username realtime
   useEffect(() => {
+    let isMounted = true;
     if (form.username.trim().length < 3) {
-      setUsernameStatus(''); return;
+      setTimeout(() => {
+        if (isMounted) setUsernameStatus('');
+      }, 0);
+      return () => {
+        isMounted = false;
+      };
     }
-    setUsernameStatus('checking');
+
+    setTimeout(() => {
+      if (isMounted) setUsernameStatus('checking');
+    }, 0);
+
     const timeout = setTimeout(async () => {
       try {
         const { data } = await api.post('/auth/check-username', { username: form.username });
-        setUsernameStatus(data.available ? 'available' : 'taken');
+        if (isMounted) setUsernameStatus(data.available ? 'available' : 'taken');
       } catch {
-        setUsernameStatus('');
+        if (isMounted) setUsernameStatus('');
       }
     }, 500);
-    return () => clearTimeout(timeout);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, [form.username]);
 
   // Đếm ngược 5 phút sau khi gửi OTP

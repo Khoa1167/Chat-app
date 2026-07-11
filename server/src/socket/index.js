@@ -46,7 +46,12 @@ const setupSocket = (io) => {
         });
 
         await msg.populate('sender', 'username nickname avatar');
-        if (replyTo) await msg.populate('replyTo');
+        if (replyTo) {
+          await msg.populate({
+            path: 'replyTo',
+            populate: { path: 'sender', select: 'username nickname avatar' }
+          });
+        }
         await Room.findByIdAndUpdate(roomId, { lastMessage: msg._id });
 
         io.to(roomId).emit('message:new', msg);
@@ -113,20 +118,16 @@ const setupSocket = (io) => {
     // ===== EVENTS: KẾT BẠN =====
 
     // Gửi lời mời kết bạn realtime
-    socket.on('friend:request', async ({ receiverId }) => {
+    socket.on('friend:request', async ({ receiverId, friendship }) => {
       try {
-        // Tìm socket của receiver và gửi thông báo
         const receiverSockets = await io.fetchSockets();
         const receiverSocket = receiverSockets.find(
           s => s.user?._id.toString() === receiverId
         );
 
         if (receiverSocket) {
-          receiverSocket.emit('friend:request_received', {
-            senderId: userId,
-            senderNickname: socket.user.nickname || socket.user.username,
-            senderAvatar: socket.user.avatar,
-          });
+          // Forward toàn bộ friendship object để client dùng được _id
+          receiverSocket.emit('friend:request_received', friendship);
         }
       } catch (err) {
         socket.emit('error', { message: err.message });
@@ -161,12 +162,21 @@ const setupSocket = (io) => {
     // ===== DISCONNECT =====
 
     socket.on('disconnect', async () => {
-      await User.findByIdAndUpdate(userId, {
-        isOnline: false,
-        lastSeen: new Date(),
-      });
-      socket.broadcast.emit('user:offline', { userId });
-      console.log(`🔴 ${socket.user.username} disconnected`);
+      const activeSockets = await io.fetchSockets();
+      const hasOtherConnections = activeSockets.some(
+        s => s.user?._id.toString() === userId.toString()
+      );
+
+      if (!hasOtherConnections) {
+        await User.findByIdAndUpdate(userId, {
+          isOnline: false,
+          lastSeen: new Date(),
+        });
+        socket.broadcast.emit('user:offline', { userId });
+        console.log(`🔴 ${socket.user.username} disconnected`);
+      } else {
+        console.log(`🟡 ${socket.user.username} disconnected one of their connections`);
+      }
     });
   });
 };

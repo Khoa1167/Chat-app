@@ -9,26 +9,37 @@ export default function SetNickname() {
   const [error, setError]         = useState('');
   const [loading, setLoading]     = useState(false);
   const navigate                  = useNavigate();
-  const { user, setUser }         = useAuth();
+  const { setUser }               = useAuth();
 
   // Kiểm tra nickname realtime khi người dùng gõ
   useEffect(() => {
+    let isMounted = true;
     if (nickname.trim().length < 2) {
-      setStatus('');
-      return;
+      setTimeout(() => {
+        if (isMounted) setStatus('');
+      }, 0);
+      return () => {
+        isMounted = false;
+      };
     }
 
-    setStatus('checking');
+    setTimeout(() => {
+      if (isMounted) setStatus('checking');
+    }, 0);
+
     const timeout = setTimeout(async () => {
       try {
         const { data } = await api.post('/auth/check-nickname', { nickname });
-        setStatus(data.available ? 'available' : 'taken');
+        if (isMounted) setStatus(data.available ? 'available' : 'taken');
       } catch {
-        setStatus('');
+        if (isMounted) setStatus('');
       }
     }, 500); // debounce 500ms
 
-    return () => clearTimeout(timeout);
+    return () => {
+      isMounted = false;
+      clearTimeout(timeout);
+    };
   }, [nickname]);
 
   const handleSubmit = async (e) => {

@@ -5,7 +5,7 @@ import FriendList from '../components/Chat/FriendList';
 
 export default function ChatPage() {
   const [activeRoom, setActiveRoom] = useState(null);
-  const [activeTab, setActiveTab]   = useState('rooms'); // 'rooms' | 'friends'
+  const [activeTab, setActiveTab]   = useState('rooms');
 
   return (
     <div className="chat-layout">
@@ -40,8 +40,8 @@ export default function ChatPage() {
         )}
       </div>
 
-      {/* Cột chat chính */}
-      <ChatWindow room={activeRoom} />
+      {/* Thêm key={activeRoom?._id} để React tự reset state khi đổi phòng */}
+      <ChatWindow key={activeRoom?._id} room={activeRoom} />
     </div>
   );
 }

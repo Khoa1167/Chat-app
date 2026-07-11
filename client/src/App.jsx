@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 import Login       from './components/Auth/Login';
 import Register    from './components/Auth/Register';
 import SetNickname from './components/Auth/SetNickname';
@@ -8,7 +9,11 @@ import ChatPage    from './pages/ChatPage';
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return <div className="loading">Đang tải...</div>;
-  return user ? children : <Navigate to="/login" />;
+  return user ? (
+    <SocketProvider>
+      {children}
+    </SocketProvider>
+  ) : <Navigate to="/login" />;
 };
 
 export default function App() {

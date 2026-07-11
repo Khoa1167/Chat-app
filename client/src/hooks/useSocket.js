@@ -1,36 +1,20 @@
-import { useEffect, useRef, useCallback } from 'react';
-import { io } from 'socket.io-client';
+import { useCallback } from 'react';
+import { useSocketContext } from '../context/SocketContext';
 
-export const useSocket = (token) => {
-  const socketRef = useRef(null);
-
-  useEffect(() => {
-    if (!token) return;
-
-    // Tạo socket riêng cho mỗi tab/user
-    const socket = io('http://localhost:5000', {
-      auth: { token },
-      reconnection: true,
-      reconnectionDelay: 1000,
-      reconnectionAttempts: 5,
-    });
-
-    socketRef.current = socket;
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [token]);
+export const useSocket = () => {
+  const socket = useSocketContext();
 
   const emit = useCallback((event, data) => {
-    socketRef.current?.emit(event, data);
-  }, []);
+    socket?.emit(event, data);
+  }, [socket]);
 
   const on = useCallback((event, handler) => {
-    socketRef.current?.on(event, handler);
-    return () => socketRef.current?.off(event, handler);
-  }, []);
+    if (!socket) return () => {};
+    socket.on(event, handler);
+    return () => {
+      socket.off(event, handler);
+    };
+  }, [socket]);
 
-  return { emit, on };
+  return { emit, on, socketRef: { current: socket } };
 };

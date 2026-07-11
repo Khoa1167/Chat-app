@@ -29,6 +29,20 @@ router.post('/', protect, async (req, res) => {
       createdBy: req.user._id,
     });
     await room.populate('members', 'username nickname avatar isOnline');
+
+    // Phát sự kiện room:added cho tất cả thành viên trong phòng đang online
+    const io = req.app.get('socketio');
+    if (io) {
+      const allSockets = await io.fetchSockets();
+      const memberIds = room.members.map(m => m._id.toString());
+      allSockets.forEach(s => {
+        if (s.user && memberIds.includes(s.user._id.toString())) {
+          s.join(room._id.toString());
+          s.emit('room:added', room);
+        }
+      });
+    }
+
     res.status(201).json(room);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -52,12 +66,20 @@ router.get('/all', protect, async (req, res) => {
 router.get('/:id/messages', protect, async (req, res) => {
   try {
     const { page = 1, limit = 30 } = req.query;
+    
+    // Kiểm tra xem user có phải thành viên phòng không (Sửa lỗi IDOR)
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
+    if (!room.members.includes(req.user._id)) {
+      return res.status(403).json({ message: 'Không có quyền truy cập tin nhắn của phòng này' });
+    }
+
     const messages = await Message.find({
       room: req.params.id,
       isDeleted: false
     })
-      .populate('sender', 'username avatar')
-      .populate('replyTo')
+      .populate('sender', 'username nickname avatar') // Sửa lỗi hiển thị Nickname
+      .populate({ path: 'replyTo', populate: { path: 'sender', select: 'username nickname avatar' } })
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
@@ -73,8 +95,11 @@ router.post('/:id/join', protect, async (req, res) => {
     const room = await Room.findByIdAndUpdate(
       req.params.id,
       { $addToSet: { members: req.user._id } },
-      { new: true }
-    ).populate('sender', 'username nickname avatar')
+      { returnDocument: 'after' }
+    ).populate('members', 'username nickname avatar isOnline');
+
+    if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
+
     res.json(room);
   } catch (err) {
     res.status(500).json({ message: err.message });

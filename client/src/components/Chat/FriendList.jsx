@@ -1,16 +1,18 @@
+/* eslint-disable no-unused-vars */
 import { useState, useEffect } from 'react';
 import { useSocket } from '../../hooks/useSocket';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../services/api';
 
 export default function FriendList({ onSelectDM }) {
+  const { user } = useAuth();
   const token = sessionStorage.getItem('token');
-  const { on, emit }          = useSocket(token);
-  const [friends, setFriends] = useState([]);
+  const { on, emit }            = useSocket(token);
+  const [friends, setFriends]   = useState([]);
   const [requests, setRequests] = useState([]);
-  const [searchQ, setSearchQ] = useState('');
+  const [searchQ, setSearchQ]   = useState('');
   const [searchResults, setSearchResults] = useState([]);
-  const [activeTab, setActiveTab] = useState('friends'); // friends | requests | search
-  const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('friends');
 
   // Load danh sách bạn bè và lời mời
   useEffect(() => {
@@ -20,15 +22,16 @@ export default function FriendList({ onSelectDM }) {
 
   // Lắng nghe lời mời kết bạn realtime
   useEffect(() => {
-    const off = on('friend:request_received', (data) => {
-      setRequests(prev => [...prev, data]);
+    const off = on('friend:request_received', (friendship) => {
+      // friendship là object đầy đủ từ server, có _id và sender
+      setRequests(prev => [...prev, friendship]);
     });
     return off;
   }, [on]);
 
   // Lắng nghe chấp nhận kết bạn realtime
   useEffect(() => {
-    const off = on('friend:request_accepted', (data) => {
+    const off = on('friend:request_accepted', () => {
       api.get('/friends').then(res => setFriends(res.data));
     });
     return off;
@@ -38,10 +41,7 @@ export default function FriendList({ onSelectDM }) {
   const handleSearch = async (e) => {
     const q = e.target.value;
     setSearchQ(q);
-    if (q.trim().length < 2) {
-      setSearchResults([]);
-      return;
-    }
+    if (q.trim().length < 2) { setSearchResults([]); return; }
     try {
       const { data } = await api.get(`/friends/search?q=${q}`);
       setSearchResults(data);
@@ -54,8 +54,8 @@ export default function FriendList({ onSelectDM }) {
   const sendRequest = async (userId) => {
     try {
       const { data } = await api.post(`/friends/request/${userId}`);
-      emit('friend:request', { receiverId: userId });
-      alert('Đã gửi lời mời kết bạn!');
+      // Gửi kèm toàn bộ friendship object để receiver có đủ thông tin
+      emit('friend:request', { receiverId: userId, friendship: data });
       setSearchResults(prev =>
         prev.map(u => u._id === userId ? { ...u, requested: true } : u)
       );
@@ -69,7 +69,7 @@ export default function FriendList({ onSelectDM }) {
     try {
       const { data } = await api.put(`/friends/accept/${friendship._id}`);
       emit('friend:accepted', {
-        senderId: friendship.sender._id || friendship.senderId,
+        senderId: friendship.sender?._id || friendship.sender,
         dmRoomId: data.dmRoom._id,
       });
       setRequests(prev => prev.filter(r => r._id !== friendship._id));
@@ -130,8 +130,7 @@ export default function FriendList({ onSelectDM }) {
             <p className="no-data">Chưa có bạn bè. Tìm và kết bạn!</p>
           )}
           {friends.map(f => {
-            const friend = f.sender?._id === f.receiver?._id
-              ? f.receiver : (f.sender?.username ? f.sender : f.receiver);
+            const friend = f.sender?._id?.toString() === user?._id?.toString() ? f.receiver : f.sender;
             return (
               <div key={f._id} className="friend-item">
                 <div className="friend-avatar">
@@ -145,10 +144,7 @@ export default function FriendList({ onSelectDM }) {
                     {friend?.isOnline ? '● Online' : '● Offline'}
                   </span>
                 </div>
-                <button
-                  className="dm-btn"
-                  onClick={() => openDM(friend?._id)}
-                >
+                <button className="dm-btn" onClick={() => openDM(friend?._id)}>
                   Nhắn tin
                 </button>
               </div>
@@ -175,12 +171,8 @@ export default function FriendList({ onSelectDM }) {
                 <span className="friend-status">Muốn kết bạn với bạn</span>
               </div>
               <div className="request-actions">
-                <button className="accept-btn" onClick={() => acceptRequest(req)}>
-                  ✓
-                </button>
-                <button className="reject-btn" onClick={() => rejectRequest(req._id)}>
-                  ✕
-                </button>
+                <button className="accept-btn" onClick={() => acceptRequest(req)}>✓</button>
+                <button className="reject-btn" onClick={() => rejectRequest(req._id)}>✕</button>
               </div>
             </div>
           ))}
@@ -205,9 +197,7 @@ export default function FriendList({ onSelectDM }) {
                 {(user.nickname || user.username)[0].toUpperCase()}
               </div>
               <div className="friend-info">
-                <span className="friend-name">
-                  {user.nickname || user.username}
-                </span>
+                <span className="friend-name">{user.nickname || user.username}</span>
                 <span className="friend-status">
                   {user.isOnline ? '● Online' : '● Offline'}
                 </span>
