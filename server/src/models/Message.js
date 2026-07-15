@@ -7,7 +7,7 @@ const messageSchema = new mongoose.Schema({
   type:      { type: String, enum: ['text', 'image', 'system', 'audio', 'file'], default: 'text' },
   fileName:  { type: String, default: null },
   replyTo:   { type: mongoose.Schema.Types.ObjectId, ref: 'Message', default: null },
-  reactions: [{ emoji: String, users: [{ type: mongoose.Schema.Types.ObjectId }] }],
+  reactions: [{ emoji: String, users: [{ type: mongoose.Schema.Types.ObjectId, ref: 'User' }] }],
   isDeleted: { type: Boolean, default: false },
 }, { timestamps: true });
 

@@ -51,6 +51,7 @@ const setupSocket = (io) => {
         if (replyTo) {
           await msg.populate({
             path: 'replyTo',
+            select: 'sender content type fileName',
             populate: { path: 'sender', select: 'username nickname avatar' }
           });
         }
@@ -88,6 +89,7 @@ const setupSocket = (io) => {
         }
 
         await msg.save();
+        await msg.populate('reactions.users', 'username nickname');
         io.to(msg.room.toString()).emit('message:reacted', {
           messageId, reactions: msg.reactions,
         });
@@ -115,6 +117,109 @@ const setupSocket = (io) => {
       socket.to(roomId).emit('room:user_joined', {
         userId, username: socket.user.nickname || socket.user.username,
       });
+    });
+
+    // ===== EVENTS: CUỘC GỌI 1-1 (WebRTC Signaling) =====
+
+    // Gửi yêu cầu gọi
+    socket.on('call:request', async ({ receiverId, signalData, type }) => {
+      try {
+        const allSockets = await io.fetchSockets();
+        const receiverSockets = allSockets.filter(
+          s => s.data.user?._id.toString() === receiverId
+        );
+
+        const callerInfo = {
+          _id: socket.user._id,
+          username: socket.user.username,
+          nickname: socket.user.nickname,
+          avatar: socket.user.avatar
+        };
+
+        receiverSockets.forEach(s => {
+          s.emit('call:request', {
+            caller: callerInfo,
+            signalData,
+            type
+          });
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    // Chấp nhận cuộc gọi
+    socket.on('call:accept', async ({ callerId, signalData }) => {
+      try {
+        const allSockets = await io.fetchSockets();
+        const callerSockets = allSockets.filter(
+          s => s.data.user?._id.toString() === callerId
+        );
+
+        callerSockets.forEach(s => {
+          s.emit('call:accept', {
+            receiverId: socket.user._id,
+            signalData
+          });
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    // Từ chối cuộc gọi
+    socket.on('call:reject', async ({ callerId }) => {
+      try {
+        const allSockets = await io.fetchSockets();
+        const callerSockets = allSockets.filter(
+          s => s.data.user?._id.toString() === callerId
+        );
+
+        callerSockets.forEach(s => {
+          s.emit('call:reject', {
+            receiverId: socket.user._id
+          });
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    // Truyền ICE Candidates
+    socket.on('call:ice-candidate', async ({ targetId, candidate }) => {
+      try {
+        const allSockets = await io.fetchSockets();
+        const targetSockets = allSockets.filter(
+          s => s.data.user?._id.toString() === targetId
+        );
+
+        targetSockets.forEach(s => {
+          s.emit('call:ice-candidate', {
+            senderId: socket.user._id,
+            candidate
+          });
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    // Kết thúc cuộc gọi
+    socket.on('call:end', async ({ targetId }) => {
+      try {
+        const allSockets = await io.fetchSockets();
+        const targetSockets = allSockets.filter(
+          s => s.data.user?._id.toString() === targetId
+        );
+
+        targetSockets.forEach(s => {
+          s.emit('call:end', {
+            senderId: socket.user._id
+          });
+        });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
     });
 
     // ===== EVENTS: KẾT BẠN =====

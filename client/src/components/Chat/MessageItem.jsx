@@ -8,10 +8,23 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
   const isOwn = message.sender._id?.toString() === user._id?.toString();
   const senderName = message.sender.nickname || message.sender.username;
 
+  // Cuộn mượt đến vị trí tin nhắn gốc được trả lời kèm hiệu ứng chớp tắt highlight
+  const handleScrollToOriginal = () => {
+    if (!message.replyTo?._id) return;
+    const target = document.getElementById(`msg-${message.replyTo._id}`);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      target.classList.add('bg-blue-50/50', 'ring-2', 'ring-blue-100', 'p-1');
+      setTimeout(() => {
+        target.classList.remove('bg-blue-50/50', 'ring-2', 'ring-blue-100', 'p-1');
+      }, 1500);
+    }
+  };
+
   // Trường hợp tin nhắn đã bị xóa
   if (message.isDeleted) {
     return (
-      <div className={`flex flex-col mb-2 px-2 ${isOwn ? 'items-end' : 'items-start'}`}>
+      <div id={`msg-${message._id}`} className={`flex flex-col mb-2 px-2 transition-all duration-300 rounded-lg ${isOwn ? 'items-end' : 'items-start'}`}>
         <div className="flex items-end gap-2">
           {!isOwn && (
             <div className="w-8 h-8 rounded-full bg-gray-200 flex-shrink-0" />
@@ -27,7 +40,7 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
   }
 
   return (
-    <div className={`flex flex-col mb-2 px-2 ${isOwn ? 'items-end' : 'items-start'}`}>
+    <div id={`msg-${message._id}`} className={`flex flex-col mb-2 px-2 transition-all duration-300 rounded-lg ${isOwn ? 'items-end' : 'items-start'}`}>
       
       {/* Nickname phía trên tin nhắn (nếu là phòng chat nhóm và không phải tin nhắn của mình) */}
       {!isOwn && !isDM && (
@@ -36,14 +49,44 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
         </span>
       )}
 
-      {/* Reply Preview phía trên bong bóng chat */}
+      {/* Discord-style Reply Preview */}
       {message.replyTo && (
-        <div className={`flex items-center gap-1 text-[11px] text-gray-400 bg-gray-50 border border-gray-100 rounded-full px-2.5 py-0.5 mb-1 max-w-[50%] truncate ${
-          isOwn ? 'mr-1' : 'ml-10'
-        }`}>
-          <span className="opacity-75">↩ Trả lời @{message.replyTo.sender?.nickname || message.replyTo.sender?.username}:</span>
-          <span className="font-medium truncate">
-            {message.replyTo.type === 'audio' ? '🎵 Tin nhắn thoại' : message.replyTo.content}
+        <div 
+          onClick={handleScrollToOriginal}
+          className={`flex items-center text-[11px] text-gray-500 mb-1 select-none cursor-pointer hover:opacity-85 transition-opacity ${
+            isOwn ? 'flex-row-reverse mr-2' : 'ml-4'
+          }`}
+          title="Cuộn tới tin nhắn gốc"
+        >
+          {/* Connector Line */}
+          <div className={`w-6 h-3 border-t-2 border-gray-200 flex-shrink-0 ${
+            isOwn 
+              ? 'border-r-2 rounded-tr-md ml-1.5' 
+              : 'border-l-2 rounded-tl-md mr-1.5'
+          }`} style={{ marginTop: '6px' }} />
+          
+          {/* Mini Avatar */}
+          <div className="w-4 h-4 rounded-full overflow-hidden flex-shrink-0 bg-gray-200 mr-1.5">
+            {message.replyTo.sender?.avatar ? (
+              <img src={message.replyTo.sender.avatar} alt="avatar" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full bg-gray-400 text-[8px] text-white flex items-center justify-center font-bold">
+                {(message.replyTo.sender?.nickname || message.replyTo.sender?.username || 'U')[0].toUpperCase()}
+              </div>
+            )}
+          </div>
+
+          {/* Replying target name */}
+          <span className="font-bold text-gray-600 mr-1.5 hover:underline">
+            @{message.replyTo.sender?.nickname || message.replyTo.sender?.username}
+          </span>
+
+          {/* Snippet of content (optimized và ẩn Cloudinary URL) */}
+          <span className="text-gray-400 truncate max-w-[200px] italic">
+            {message.replyTo.type === 'audio' ? 'Tin nhắn thoại' : 
+             message.replyTo.type === 'image' ? '[Hình ảnh]' : 
+             message.replyTo.type === 'file' ? `[Tệp: ${message.replyTo.fileName || 'Tài liệu'}]` : 
+             message.replyTo.content}
           </span>
         </div>
       )}
@@ -123,20 +166,39 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
           {message.reactions?.length > 0 && (
             <div className={`flex gap-0.5 mt-1 ${isOwn ? 'justify-end' : 'justify-start'}`}>
               {message.reactions.map(r => {
-                const hasReacted = r.users.some(uid => uid?.toString() === user._id?.toString());
+                const hasReacted = r.users.some(u => {
+                  const uid = typeof u === 'object' && u !== null ? u._id : u;
+                  return uid?.toString() === user._id?.toString();
+                });
+                
+                const reactorNames = r.users
+                  .map(u => (typeof u === 'object' && u !== null ? (u.nickname || u.username) : 'Người dùng'))
+                  .join(', ');
+
                 return (
-                  <button
-                    key={r.emoji}
-                    className={`inline-flex items-center gap-1 border text-[10px] px-2 py-0.5 rounded-full cursor-pointer select-none active:scale-95 transition-all ${
-                      hasReacted 
-                        ? 'bg-blue-50 border-blue-200 text-[#0084ff]' 
-                        : 'bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200'
-                    }`}
-                    onClick={() => onReact(message._id, r.emoji)}
-                  >
-                    <span>{r.emoji}</span>
-                    <span className="font-bold opacity-85">{r.users.length}</span>
-                  </button>
+                  <div key={r.emoji} className="relative group/react inline-block">
+                    <button
+                      className={`inline-flex items-center gap-1 border text-[10px] px-2 py-0.5 rounded-full cursor-pointer select-none active:scale-95 transition-all ${
+                        hasReacted 
+                          ? 'bg-blue-50 border-blue-200 text-[#0084ff]' 
+                          : 'bg-gray-100 border-transparent text-gray-600 hover:bg-gray-200'
+                      }`}
+                      onClick={() => onReact(message._id, r.emoji)}
+                    >
+                      <span>{r.emoji}</span>
+                      <span className="font-bold opacity-85">{r.users.length}</span>
+                    </button>
+                    
+                    {/* Tooltip hiển thị người bày tỏ cảm xúc */}
+                    {reactorNames && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1.5 hidden group-hover/react:flex flex-col items-center z-30">
+                        <div className="bg-gray-900/95 text-white text-[9px] font-semibold px-2 py-1 rounded-md shadow-md whitespace-nowrap leading-tight text-center">
+                          {reactorNames}
+                        </div>
+                        <div className="w-1.5 h-1.5 bg-gray-900/95 rotate-45 -mt-0.5" />
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

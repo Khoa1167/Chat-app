@@ -90,7 +90,8 @@ router.get('/:id/messages', protect, async (req, res) => {
       isDeleted: false
     })
       .populate('sender', 'username nickname avatar') // Sửa lỗi hiển thị Nickname
-      .populate({ path: 'replyTo', populate: { path: 'sender', select: 'username nickname avatar' } })
+      .populate({ path: 'replyTo', select: 'sender content type fileName', populate: { path: 'sender', select: 'username nickname avatar' } })
+      .populate('reactions.users', 'username nickname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
