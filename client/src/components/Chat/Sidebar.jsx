@@ -12,8 +12,7 @@ const getDMPartner = (room, currentUser) => {
 
 export default function Sidebar({ activeRoom, onSelectRoom }) {
   const { user, logout }    = useAuth();
-  const token = sessionStorage.getItem('token');
-  const { on, emit }        = useSocket(token);
+  const { on, emit }        = useSocket();
   const [rooms, setRooms]   = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [newRoomName, setNewRoomName] = useState('');
@@ -126,103 +125,197 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
   };
 
   return (
-    <div className="sidebar">
-      {/* Header */}
-      <div className="sidebar-header">
-        <div className="user-info" onClick={() => setShowProfile(true)} style={{ cursor: 'pointer' }}>
-          {user.avatar ? (
-            <img src={user.avatar} alt="avatar" className="avatar-img" />
-          ) : (
-            <div className="avatar">{(user.nickname || user.username)[0].toUpperCase()}</div>
-          )}
-          <span>{user.nickname || user.username}</span>
-        </div>
-        <button onClick={logout} className="logout-btn" title="Đăng xuất">⏻</button>
-      </div>
+    <div className="flex flex-col h-full bg-white text-black font-sans select-none">
+      {/* Header Chats kiểu Messenger */}
+      <div className="p-4 pb-2 flex flex-col gap-3 flex-shrink-0">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {/* Avatar của User để mở Cài đặt cá nhân */}
+            <div 
+              className="w-9 h-9 rounded-full bg-gray-200 cursor-pointer hover:opacity-90 transition-opacity overflow-hidden ring-1 ring-gray-200"
+              onClick={() => setShowProfile(true)}
+              title="Cài đặt cá nhân"
+            >
+              {user.avatar ? (
+                <img src={user.avatar} alt="avatar" className="w-9 h-9 rounded-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-[#0084ff] text-white font-bold text-sm">
+                  {(user.nickname || user.username)[0].toUpperCase()}
+                </div>
+              )}
+            </div>
+            <h1 className="text-2xl font-black tracking-tight text-gray-900">Đoạn chat</h1>
+          </div>
 
-  {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
-
-      {/* Danh sách phòng */}
-      <div className="sidebar-section">
-        <div className="section-header">
-          <span>Cuộc trò chuyện</span>
-          <div style={{ display: 'flex', gap: '6px' }}>
-            <button onClick={handleShowJoin} title="Tìm phòng">🔍</button>
-            <button onClick={() => setShowCreate(!showCreate)} title="Tạo phòng">+</button>
+          <div className="flex gap-2">
+            <button 
+              onClick={handleShowJoin} 
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-sm"
+              title="Tìm phòng chat công khai"
+            >
+              🔍
+            </button>
+            <button 
+              onClick={() => setShowCreate(!showCreate)} 
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-base font-bold"
+              title="Tạo phòng chat mới"
+            >
+              +
+            </button>
+            <button 
+              onClick={logout} 
+              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center cursor-pointer transition-colors text-xs text-red-500 font-bold"
+              title="Đăng xuất"
+            >
+              ⏻
+            </button>
           </div>
         </div>
 
+        {/* Ô Tìm kiếm bo tròn Messenger */}
+        <div className="relative">
+          <input 
+            className="w-full bg-[#f0f2f5] border-none rounded-full py-2 pl-9 pr-4 text-xs text-black placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-300"
+            placeholder="Tìm kiếm trên Messenger"
+            disabled
+          />
+          <span className="absolute left-3.5 top-2.5 text-gray-400 text-xs">🔍</span>
+        </div>
+      </div>
+
+      {showProfile && <ProfileModal onClose={() => setShowProfile(false)} />}
+
+      {/* Vùng cuộn danh sách phòng & bạn bè */}
+      <div className="flex-1 overflow-y-auto hide-scrollbar px-3 py-1 flex flex-col gap-1">
+        
+        {/* Nút Bạn bè & Lời mời kết bạn */}
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 mb-1.5 ${
+            !activeRoom 
+              ? 'bg-[#eaf4ff] text-[#0084ff] font-semibold shadow-xs' 
+              : 'hover:bg-gray-100 text-black'
+          }`}
+          onClick={() => onSelectRoom(null)}
+        >
+          <div className="w-9 h-9 rounded-full bg-[#0084ff]/10 text-[#0084ff] flex items-center justify-center font-bold text-sm">
+            👥
+          </div>
+          <div className="flex flex-col leading-tight flex-1">
+            <span className="text-sm font-semibold">Bạn bè & Lời mời</span>
+            <span className="text-[10px] opacity-75">Quản lý kết bạn</span>
+          </div>
+        </div>
+
+        <div className="w-full h-[1px] bg-gray-100 my-1" />
+
         {/* Form tạo phòng */}
         {showCreate && (
-          <form onSubmit={createRoom} className="create-room-form">
+          <form onSubmit={createRoom} className="flex gap-2 p-2 bg-[#f0f2f5] rounded-xl mb-2">
             <input
               value={newRoomName}
               onChange={e => setNewRoomName(e.target.value)}
-              placeholder="Tên phòng..."
+              placeholder="Tên phòng mới..."
+              className="bg-transparent text-sm placeholder-gray-500 outline-none w-full flex-1 px-1"
               autoFocus
             />
-            <button type="submit">Tạo</button>
+            <button type="submit" className="text-white text-xs font-semibold bg-[#0084ff] px-3 py-1 rounded-full hover:bg-[#0073de] transition-colors">Tạo</button>
           </form>
         )}
 
         {/* Danh sách phòng để tham gia */}
         {showJoin && (
-          <div className="join-room-list">
-            <div className="join-room-header">
-              <span>Tìm phòng để tham gia</span>
-              <button onClick={() => setShowJoin(false)}>✕</button>
+          <div className="bg-white rounded-xl p-3 mb-2 border border-gray-200 flex flex-col gap-2 shadow-lg">
+            <div className="flex items-center justify-between text-xs font-bold text-gray-800 pb-1.5 border-b border-gray-100">
+              <span>Tìm và tham gia phòng</span>
+              <button onClick={() => setShowJoin(false)} className="hover:text-black text-xs">✕</button>
             </div>
-            {allRooms.length === 0 && (
-              <p className="no-rooms">Không có phòng nào</p>
-            )}
-            {allRooms.filter(r => !r.isDM).map(room => {
-              const isMember = rooms.find(r => r._id === room._id);
-              return (
-                <div key={room._id} className="join-room-item">
-                  <span>#{room.name}</span>
-                  {isMember
-                    ? <span className="joined-tag">Đã tham gia</span>
-                    : <button onClick={() => joinRoom(room)}>Tham gia</button>
-                  }
-                </div>
-              );
-            })}
+            
+            <div className="max-h-40 overflow-y-auto hide-scrollbar flex flex-col gap-1">
+              {allRooms.length === 0 && (
+                <p className="text-[11px] text-center text-gray-400 py-3 italic">Không có phòng công khai</p>
+              )}
+              {allRooms.filter(r => !r.isDM).map(room => {
+                const isMember = rooms.find(r => r._id === room._id);
+                return (
+                  <div key={room._id} className="flex items-center justify-between p-1.5 rounded-lg hover:bg-gray-50 text-[11px]">
+                    <span className="font-semibold text-gray-700 truncate max-w-[150px]"># {room.name}</span>
+                    {isMember ? (
+                      <span className="text-gray-400 italic">Đã vào</span>
+                    ) : (
+                      <button onClick={() => joinRoom(room)} className="bg-[#0084ff] text-white font-bold px-2 py-0.5 rounded-full hover:bg-[#0073de] transition-colors text-[10px]">Vào</button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        {/* Danh sách phòng của user — kiểu Discord/Messenger */}
-        <div className="room-list">
+        {/* Danh sách phòng của user */}
+        <div className="flex flex-col gap-1">
           {rooms.length === 0 && (
-            <p className="no-rooms">Chưa có cuộc trò chuyện nào.<br/>Tạo phòng hoặc kết bạn để bắt đầu!</p>
+            <p className="text-xs text-center text-gray-400 py-8 px-3 italic">
+              Chưa có cuộc trò chuyện nào. Hãy tạo phòng mới!
+            </p>
           )}
           {rooms.map(room => {
             const dmPartner = getDMPartner(room, user);
             const displayName = room.isDM
-              ? (dmPartner?.nickname || dmPartner?.username || 'Unknown')
+              ? (dmPartner?.nickname || dmPartner?.username || 'Người dùng Messenger')
               : room.name;
-            const lastMsgText = room.lastMessage?.content
-              ? (room.lastMessage.content.length > 28
-                  ? room.lastMessage.content.slice(0, 28) + '...'
-                  : room.lastMessage.content)
-              : (room.isDM ? 'Bắt đầu trò chuyện' : 'Chưa có tin nhắn');
+
+            const isActive = activeRoom?._id === room._id;
+            const lastMsg = room.lastMessage;
 
             return (
               <div
                 key={room._id}
-                className={`room-item-card ${activeRoom?._id === room._id ? 'active' : ''}`}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-100 ${
+                  isActive 
+                    ? 'bg-[#f0f2f5] font-semibold' 
+                    : 'hover:bg-[#f0f2f5]/60 text-gray-900'
+                }`}
                 onClick={() => onSelectRoom(room)}
               >
-                {room.isDM ? (
-                  <div className="room-avatar dm-avatar">
-                    {displayName[0].toUpperCase()}
-                    {dmPartner?.isOnline && <span className="online-badge" />}
-                  </div>
-                ) : (
-                  <div className="room-avatar group-avatar">#</div>
-                )}
-                <div className="room-text">
-                  <div className="room-name-row">{displayName}</div>
-                  <div className="room-preview">{lastMsgText}</div>
+                {/* Avatar / Icon phòng */}
+                <div className="relative flex-shrink-0">
+                  {room.isDM ? (
+                    <div className="w-11 h-11 rounded-full bg-gray-200 text-white flex items-center justify-center font-bold text-base overflow-hidden ring-1 ring-gray-100">
+                      {dmPartner?.avatar ? (
+                        <img src={dmPartner.avatar} alt="avatar" className="w-11 h-11 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-[#0084ff] flex items-center justify-center text-white">
+                          {displayName[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="w-11 h-11 rounded-full bg-gradient-to-tr from-[#006aff] to-[#00b2ff] text-white flex items-center justify-center font-bold text-base">
+                      💬
+                    </div>
+                  )}
+                  {room.isDM && (
+                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                      dmPartner?.isOnline ? 'bg-[#31a24c]' : 'bg-gray-400'
+                    }`} />
+                  )}
+                </div>
+                
+                {/* Tên phòng & Tin nhắn xem trước */}
+                <div className="flex-1 min-w-0 flex flex-col leading-tight">
+                  <span className="text-[14px] font-semibold text-gray-900 truncate">{displayName}</span>
+                  <span className="text-xs text-gray-500 truncate mt-0.5">
+                    {lastMsg ? (
+                      <>
+                        <span className="font-medium mr-1">
+                          {lastMsg.sender?._id?.toString() === user._id?.toString() ? 'Bạn:' : `${lastMsg.sender?.nickname || lastMsg.sender?.username}:`}
+                        </span>
+                        {lastMsg.content}
+                      </>
+                    ) : (
+                      'Chưa có tin nhắn nào'
+                    )}
+                  </span>
                 </div>
               </div>
             );

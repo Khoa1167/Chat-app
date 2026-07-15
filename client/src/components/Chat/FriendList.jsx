@@ -100,51 +100,77 @@ export default function FriendList({ onSelectDM }) {
   };
 
   return (
-    <div className="friend-list">
-      {/* Tabs */}
-      <div className="friend-tabs">
-        <button
-          className={activeTab === 'friends' ? 'active' : ''}
-          onClick={() => setActiveTab('friends')}
-        >
-          Bạn bè {friends.length > 0 && `(${friends.length})`}
-        </button>
-        <button
-          className={activeTab === 'requests' ? 'active' : ''}
-          onClick={() => setActiveTab('requests')}
-        >
-          Lời mời {requests.length > 0 && `(${requests.length})`}
-        </button>
-        <button
-          className={activeTab === 'search' ? 'active' : ''}
-          onClick={() => setActiveTab('search')}
-        >
-          Tìm bạn
-        </button>
+    <div className="flex flex-col h-full bg-white text-black font-sans select-none">
+      {/* Header Trang bạn bè — màu trắng Messenger */}
+      <div className="h-[60px] border-b border-gray-200 px-4 flex items-center bg-white gap-4 text-sm font-semibold select-none flex-shrink-0">
+        <span className="text-xl">👥</span>
+        <span className="font-bold text-gray-900 text-[16px]">Bạn bè</span>
+
+        <div className="w-[1px] h-4 bg-gray-200" />
+
+        {/* Các tab chuyển đổi */}
+        <div className="flex gap-1 text-xs">
+          <button
+            className={`px-3 py-1.5 rounded-full font-semibold cursor-pointer transition-colors ${
+              activeTab === 'friends' ? 'bg-[#f0f2f5] text-black' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('friends')}
+          >
+            Tất cả bạn bè {friends.length > 0 && `(${friends.length})`}
+          </button>
+          <button
+            className={`px-3 py-1.5 rounded-full font-semibold cursor-pointer transition-colors ${
+              activeTab === 'requests' ? 'bg-[#f0f2f5] text-black' : 'text-gray-500 hover:bg-gray-50'
+            }`}
+            onClick={() => setActiveTab('requests')}
+          >
+            Lời mời kết bạn {requests.length > 0 && `(${requests.length})`}
+          </button>
+          <button
+            className={`px-3 py-1.5 rounded-full font-semibold cursor-pointer transition-colors ${
+              activeTab === 'search' ? 'bg-[#0084ff] text-white' : 'bg-[#0084ff]/10 text-[#0084ff] hover:bg-[#0084ff]/20'
+            }`}
+            onClick={() => setActiveTab('search')}
+          >
+            Thêm bạn mới
+          </button>
+        </div>
       </div>
 
       {/* Tab: Danh sách bạn bè */}
       {activeTab === 'friends' && (
-        <div className="friend-section">
+        <div className="flex-1 overflow-y-auto hide-scrollbar p-6 flex flex-col gap-2 bg-white">
+          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
+            Tất cả bạn bè ({friends.length})
+          </h4>
           {friends.length === 0 && (
-            <p className="no-data">Chưa có bạn bè. Tìm và kết bạn!</p>
+            <p className="text-sm text-center text-gray-400 py-12 italic">Chưa có bạn bè nào. Hãy thử kết bạn với những người khác nhé!</p>
           )}
           {friends.map(f => {
             const friend = f.sender?._id?.toString() === user?._id?.toString() ? f.receiver : f.sender;
             return (
-              <div key={f._id} className="friend-item">
-                <div className="friend-avatar">
-                  {(friend?.nickname || friend?.username || '?')[0].toUpperCase()}
+              <div key={f._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border-b border-gray-100 transition-all duration-150">
+                <div className="flex items-center gap-3">
+                  <div className="relative">
+                    <div className="w-10 h-10 rounded-full bg-gray-200 text-white flex items-center justify-center font-bold text-base overflow-hidden ring-1 ring-gray-100">
+                      {friend?.avatar ? (
+                        <img src={friend.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
+                      ) : (
+                        <div className="w-full h-full bg-[#0084ff] flex items-center justify-center text-white">
+                          {(friend?.nickname || friend?.username || '?')[0].toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-white ${
+                      friend?.isOnline ? 'bg-[#31a24c]' : 'bg-gray-400'
+                    }`} />
+                  </div>
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="text-sm font-bold text-gray-900 truncate">{friend?.nickname || friend?.username}</span>
+                    <span className="text-xs text-gray-500 truncate">@{friend?.username}</span>
+                  </div>
                 </div>
-                <div className="friend-info">
-                  <span className="friend-name">
-                    {friend?.nickname || friend?.username}
-                  </span>
-                  <span className={`friend-status ${friend?.isOnline ? 'online' : 'offline'}`}>
-                    {friend?.isOnline ? '● Online' : '● Offline'}
-                  </span>
-                </div>
-                <button className="dm-btn" onClick={() => openDM(friend?._id)}>
+                <button className="bg-[#0084ff] hover:bg-[#0073de] text-white font-bold text-xs px-4 py-2 rounded-full transition-colors cursor-pointer" onClick={() => openDM(friend?._id)}>
                   Nhắn tin
                 </button>
               </div>
@@ -155,62 +181,76 @@ export default function FriendList({ onSelectDM }) {
 
       {/* Tab: Lời mời kết bạn */}
       {activeTab === 'requests' && (
-        <div className="friend-section">
+        <div className="flex-1 overflow-y-auto hide-scrollbar p-6 flex flex-col gap-2 bg-white">
+          <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 px-1">
+            Yêu cầu kết bạn chờ duyệt ({requests.length})
+          </h4>
           {requests.length === 0 && (
-            <p className="no-data">Không có lời mời nào</p>
+            <p className="text-sm text-center text-gray-400 py-12 italic">Không có lời mời kết bạn nào</p>
           )}
           {requests.map(req => (
-            <div key={req._id} className="friend-item">
-              <div className="friend-avatar">
-                {(req.sender?.nickname || req.sender?.username || '?')[0].toUpperCase()}
+            <div key={req._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border-b border-gray-100 transition-all duration-150">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-base flex-shrink-0">
+                  {(req.sender?.nickname || req.sender?.username || '?')[0].toUpperCase()}
+                </div>
+                <div className="flex flex-col min-w-0 leading-tight">
+                  <span className="text-sm font-bold text-gray-900 truncate">{req.sender?.nickname || req.sender?.username}</span>
+                  <span className="text-xs text-gray-500 truncate">Muốn kết nối với bạn</span>
+                </div>
               </div>
-              <div className="friend-info">
-                <span className="friend-name">
-                  {req.sender?.nickname || req.sender?.username}
-                </span>
-                <span className="friend-status">Muốn kết bạn với bạn</span>
-              </div>
-              <div className="request-actions">
-                <button className="accept-btn" onClick={() => acceptRequest(req)}>✓</button>
-                <button className="reject-btn" onClick={() => rejectRequest(req._id)}>✕</button>
+              <div className="flex gap-2">
+                <button className="px-4 py-2 rounded-full bg-[#31a24c] hover:bg-[#28843e] text-white font-bold text-xs cursor-pointer flex items-center justify-center transition-colors" onClick={() => acceptRequest(req)}>Đồng ý</button>
+                <button className="px-4 py-2 rounded-full bg-[#f02849] hover:bg-[#d0203c] text-white font-bold text-xs cursor-pointer flex items-center justify-center transition-colors" onClick={() => rejectRequest(req._id)}>Từ chối</button>
               </div>
             </div>
           ))}
         </div>
       )}
 
-      {/* Tab: Tìm kiếm */}
+      {/* Tab: Tìm bạn / Thêm bạn */}
       {activeTab === 'search' && (
-        <div className="friend-section">
-          <input
-            className="search-input"
-            placeholder="Tìm theo tên tài khoản hoặc nickname..."
-            value={searchQ}
-            onChange={handleSearch}
-          />
-          {searchResults.length === 0 && searchQ.length >= 2 && (
-            <p className="no-data">Không tìm thấy user nào</p>
-          )}
-          {searchResults.map(user => (
-            <div key={user._id} className="friend-item">
-              <div className="friend-avatar">
-                {(user.nickname || user.username)[0].toUpperCase()}
+        <div className="flex-1 overflow-y-auto hide-scrollbar p-6 flex flex-col gap-4 bg-white">
+          <div>
+            <h3 className="text-sm font-bold text-gray-900 mb-1">Thêm bạn mới</h3>
+            <p className="text-xs text-gray-500 mb-3">Tìm kiếm bạn bè bằng tên tài khoản trên hệ thống.</p>
+            <input
+              className="bg-[#f0f2f5] border border-transparent rounded-full px-4 py-2.5 text-sm text-black placeholder-gray-500 focus:outline-none focus:bg-white focus:border-gray-300 w-full"
+              placeholder="Nhập tên tài khoản của họ..."
+              value={searchQ}
+              onChange={handleSearch}
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 mt-2">
+            {searchResults.length === 0 && searchQ.length >= 2 && (
+              <p className="text-xs text-center text-gray-400 py-4 italic">Không tìm thấy người dùng nào</p>
+            )}
+            {searchResults.map(user => (
+              <div key={user._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border-b border-gray-100 transition-all duration-150">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-base flex-shrink-0">
+                    {(user.nickname || user.username)[0].toUpperCase()}
+                  </div>
+                  <div className="flex flex-col min-w-0 leading-tight">
+                    <span className="text-sm font-bold text-gray-900 truncate">{user.nickname || user.username}</span>
+                    <span className="text-xs text-gray-500 truncate">@{user.username}</span>
+                  </div>
+                </div>
+                <button
+                  className={`font-semibold text-xs px-4 py-2 rounded-full transition-colors cursor-pointer ${
+                    user.requested 
+                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                      : 'bg-[#0084ff] text-white hover:bg-[#0073de]'
+                  }`}
+                  onClick={() => sendRequest(user._id)}
+                  disabled={user.requested}
+                >
+                  {user.requested ? 'Đã gửi yêu cầu' : 'Kết bạn'}
+                </button>
               </div>
-              <div className="friend-info">
-                <span className="friend-name">{user.nickname || user.username}</span>
-                <span className="friend-status">
-                  {user.isOnline ? '● Online' : '● Offline'}
-                </span>
-              </div>
-              <button
-                className="add-btn"
-                onClick={() => sendRequest(user._id)}
-                disabled={user.requested}
-              >
-                {user.requested ? 'Đã gửi' : '+ Kết bạn'}
-              </button>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       )}
     </div>

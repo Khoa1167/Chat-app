@@ -5,43 +5,22 @@ import FriendList from '../components/Chat/FriendList';
 
 export default function ChatPage() {
   const [activeRoom, setActiveRoom] = useState(null);
-  const [activeTab, setActiveTab]   = useState('rooms');
 
   return (
-    <div className="chat-layout">
-      {/* Cột trái — navigation icons */}
-      <div className="nav-bar">
-        <button
-          className={`nav-icon ${activeTab === 'rooms' ? 'active' : ''}`}
-          onClick={() => setActiveTab('rooms')}
-          title="Phòng chat"
-        >
-          💬
-        </button>
-        <button
-          className={`nav-icon ${activeTab === 'friends' ? 'active' : ''}`}
-          onClick={() => setActiveTab('friends')}
-          title="Bạn bè"
-        >
-          👥
-        </button>
+    <div className="flex h-screen w-screen overflow-hidden bg-white text-black font-sans select-none">
+      {/* Cột 1: Sidebar (Danh sách cuộc trò chuyện) — màu nền trắng, rộng 360px */}
+      <div className="w-[360px] flex-shrink-0 flex flex-col bg-white border-r border-gray-200">
+        <Sidebar activeRoom={activeRoom} onSelectRoom={setActiveRoom} />
       </div>
 
-      {/* Cột sidebar */}
-      <div className="sidebar-wrapper">
-        {activeTab === 'rooms' && (
-          <Sidebar activeRoom={activeRoom} onSelectRoom={setActiveRoom} />
-        )}
-        {activeTab === 'friends' && (
-          <FriendList onSelectDM={(room) => {
-            setActiveRoom(room);
-            setActiveTab('rooms');
-          }} />
+      {/* Cột 2: Vùng nội dung chính (Khung chat hoặc Danh sách bạn bè) */}
+      <div className="flex-1 flex flex-col min-w-0 bg-white">
+        {activeRoom ? (
+          <ChatWindow key={activeRoom._id} room={activeRoom} onBackToFriends={() => setActiveRoom(null)} />
+        ) : (
+          <FriendList onSelectDM={setActiveRoom} />
         )}
       </div>
-
-      {/* Thêm key={activeRoom?._id} để React tự reset state khi đổi phòng */}
-      <ChatWindow key={activeRoom?._id} room={activeRoom} />
     </div>
   );
 }

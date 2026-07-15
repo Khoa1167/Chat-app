@@ -36,7 +36,7 @@ router.post('/', protect, async (req, res) => {
       const allSockets = await io.fetchSockets();
       const memberIds = room.members.map(m => m._id.toString());
       allSockets.forEach(s => {
-        if (s.user && memberIds.includes(s.user._id.toString())) {
+        if (s.data.user && memberIds.includes(s.data.user._id.toString())) {
           s.join(room._id.toString());
           s.emit('room:added', room);
         }
@@ -70,7 +70,7 @@ router.get('/:id/messages', protect, async (req, res) => {
     // Kiểm tra xem user có phải thành viên phòng không (Sửa lỗi IDOR)
     const room = await Room.findById(req.params.id);
     if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
-    if (!room.members.includes(req.user._id)) {
+    if (!room.members.some(memberId => memberId.toString() === req.user._id.toString())) {
       return res.status(403).json({ message: 'Không có quyền truy cập tin nhắn của phòng này' });
     }
 

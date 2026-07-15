@@ -63,13 +63,6 @@ export default function Register() {
     return `${m}:${s}`;
   };
 
-  const getUsernameMsg = () => {
-    if (usernameStatus === 'checking') return <span className="status-checking">⏳ Đang kiểm tra...</span>;
-    if (usernameStatus === 'available') return <span className="status-available">✅ Tên tài khoản có thể dùng</span>;
-    if (usernameStatus === 'taken')    return <span className="status-taken">❌ Tên tài khoản đã tồn tại</span>;
-    return null;
-  };
-
   // Bước 1: Gửi OTP
   const handleSendOTP = async (e) => {
     e.preventDefault();
@@ -141,60 +134,125 @@ export default function Register() {
     }
   };
 
+  const getUsernameMsg = () => {
+    if (usernameStatus === 'checking') return <span className="text-xs text-info flex items-center gap-1 mt-1">⏳ Đang kiểm tra...</span>;
+    if (usernameStatus === 'available') return <span className="text-xs text-success flex items-center gap-1 mt-1">✅ Tên tài khoản có thể dùng</span>;
+    if (usernameStatus === 'taken')    return <span className="text-xs text-error flex items-center gap-1 mt-1">❌ Tên tài khoản đã tồn tại</span>;
+    return null;
+  };
+
   // ── Giao diện bước 1: Form đăng ký ──
   if (step === 1) {
     return (
-      <div className="auth-container">
-        <div className="auth-card">
-          <h1>Đăng ký</h1>
-          {error && <p className="error-msg">{error}</p>}
-          <form onSubmit={handleSendOTP}>
-            <input
-              placeholder="Tên tài khoản (tối thiểu 3 ký tự)"
-              value={form.username}
-              onChange={e => setForm({ ...form, username: e.target.value })}
-              required minLength={3} maxLength={30}
-            />
-            <div className="status-msg">{getUsernameMsg()}</div>
+      <div className="min-h-screen flex items-center justify-center bg-base-200 px-4 py-8" data-theme="light">
+        <div className="card w-full max-w-lg bg-base-100 shadow-2xl border border-base-300/50">
+          <div className="card-body p-8">
+            <h1 className="text-3xl font-bold text-center text-primary mb-2">Đăng ký</h1>
+            
+            {/* Step indicator */}
+            <ul className="steps w-full my-6 text-sm">
+              <li className="step step-primary font-semibold">Tài khoản</li>
+              <li className="step">Xác thực</li>
+            </ul>
 
-            <input
-              type="password"
-              placeholder="Mật khẩu (tối thiểu 6 ký tự)"
-              value={form.password}
-              onChange={e => setForm({ ...form, password: e.target.value })}
-              required minLength={6}
-            />
+            {error && (
+              <div className="alert alert-error shadow-sm py-3 mb-4 rounded-lg">
+                <span className="text-sm font-medium">{error}</span>
+              </div>
+            )}
 
-            <input
-              type="password"
-              placeholder="Xác nhận lại mật khẩu"
-              value={form.confirmPassword}
-              onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
-              required
-            />
+            <form onSubmit={handleSendOTP} className="flex flex-col gap-4">
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold text-base-content/80">Tên tài khoản</span>
+                </label>
+                <input
+                  className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                  placeholder="Nhập tên tài khoản (3 - 30 ký tự)..."
+                  value={form.username}
+                  onChange={e => setForm({ ...form, username: e.target.value })}
+                  required minLength={3} maxLength={30}
+                />
+                <div className="min-h-[20px]">{getUsernameMsg()}</div>
+              </div>
 
-            <input
-              type="email"
-              placeholder="Email"
-              value={form.email}
-              onChange={e => setForm({ ...form, email: e.target.value })}
-              required
-            />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-base-content/80">Mật khẩu</span>
+                  </label>
+                  <input
+                    type="password"
+                    className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                    placeholder="Tối thiểu 6 ký tự..."
+                    value={form.password}
+                    onChange={e => setForm({ ...form, password: e.target.value })}
+                    required minLength={6}
+                  />
+                </div>
 
-            <input
-              placeholder="Số điện thoại (có thể bỏ trống)"
-              value={form.phone}
-              onChange={e => setForm({ ...form, phone: e.target.value })}
-            />
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold text-base-content/80">Xác nhận mật khẩu</span>
+                  </label>
+                  <input
+                    type="password"
+                    className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                    placeholder="Nhập lại mật khẩu..."
+                    value={form.confirmPassword}
+                    onChange={e => setForm({ ...form, confirmPassword: e.target.value })}
+                    required
+                  />
+                </div>
+              </div>
 
-            <button
-              type="submit"
-              disabled={loading || usernameStatus !== 'available'}
-            >
-              {loading ? 'Đang gửi OTP...' : 'Tiếp theo →'}
-            </button>
-          </form>
-          <p>Đã có tài khoản? <Link to="/login">Đăng nhập</Link></p>
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold text-base-content/80">Email</span>
+                </label>
+                <input
+                  type="email"
+                  className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                  placeholder="name@example.com"
+                  value={form.email}
+                  onChange={e => setForm({ ...form, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-semibold text-base-content/80">Số điện thoại (tùy chọn)</span>
+                </label>
+                <input
+                  className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                  placeholder="Nhập số điện thoại..."
+                  value={form.phone}
+                  onChange={e => setForm({ ...form, phone: e.target.value })}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="btn btn-primary w-full mt-4 font-bold shadow-md shadow-primary/25 hover:shadow-lg transition-all duration-200"
+                disabled={loading || usernameStatus !== 'available'}
+              >
+                {loading ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Đang gửi OTP...
+                  </>
+                ) : 'Tiếp theo →'}
+              </button>
+            </form>
+            
+            <div className="text-center mt-6 text-sm text-base-content/60">
+              Đã có tài khoản?{' '}
+              <Link to="/login" className="link link-primary link-hover font-semibold">
+                Đăng nhập
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -202,52 +260,80 @@ export default function Register() {
 
   // ── Giao diện bước 2: Nhập OTP ──
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Xác thực Email</h1>
-        <p className="auth-desc">
-          Mã OTP đã được gửi tới <strong>{form.email}</strong>
-        </p>
+    <div className="min-h-screen flex items-center justify-center bg-base-200 px-4" data-theme="light">
+      <div className="card w-full max-w-md bg-base-100 shadow-2xl border border-base-300/50">
+        <div className="card-body p-8">
+          <h1 className="text-3xl font-bold text-center text-primary mb-2">Đăng ký</h1>
+          
+          {/* Step indicator */}
+          <ul className="steps w-full my-6 text-sm">
+            <li className="step step-primary">Tài khoản</li>
+            <li className="step step-primary font-semibold">Xác thực</li>
+          </ul>
 
-        {countdown > 0 ? (
-          <p className="otp-countdown">
-            ⏰ Mã hết hạn sau: <strong>{formatCountdown(countdown)}</strong>
+          <p className="text-sm text-center text-base-content/75 mb-4">
+            Mã OTP đã được gửi tới <strong className="text-base-content">{form.email}</strong>
           </p>
-        ) : (
-          <p className="otp-expired">❌ Mã OTP đã hết hạn</p>
-        )}
 
-        {error && <p className="error-msg">{error}</p>}
+          <div className="flex justify-center mb-6">
+            {countdown > 0 ? (
+              <div className="alert alert-info py-2 px-4 shadow-sm w-auto rounded-full text-xs font-semibold">
+                <span>⏰ Mã hết hạn sau: {formatCountdown(countdown)}</span>
+              </div>
+            ) : (
+              <div className="alert alert-error py-2 px-4 shadow-sm w-auto rounded-full text-xs font-semibold">
+                <span>❌ Mã OTP đã hết hạn</span>
+              </div>
+            )}
+          </div>
 
-        <form onSubmit={handleVerifyOTP}>
-          <input
-            placeholder="Nhập mã OTP 6 chữ số"
-            value={otp}
-            onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-            maxLength={6}
-            style={{ letterSpacing: '8px', fontSize: '22px', textAlign: 'center' }}
-            required
-          />
+          {error && (
+            <div className="alert alert-error shadow-sm py-3 mb-4 rounded-lg">
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          )}
 
-          <button type="submit" disabled={loading || countdown === 0 || otp.length !== 6}>
-            {loading ? 'Đang xác thực...' : 'Xác nhận'}
-          </button>
-        </form>
+          <form onSubmit={handleVerifyOTP} className="flex flex-col gap-4">
+            <div className="form-control">
+              <input
+                className="input input-bordered focus:input-primary w-full tracking-[8px] text-2xl text-center py-6 font-bold"
+                placeholder="000000"
+                value={otp}
+                onChange={e => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                maxLength={6}
+                required
+              />
+            </div>
 
-        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '12px' }}>
-          <button
-            onClick={() => { setStep(1); setError(''); setOtp(''); }}
-            style={{ background: 'none', border: 'none', color: '#5b5bd6', cursor: 'pointer', fontSize: '14px' }}
-          >
-            ← Quay lại
-          </button>
-          <button
-            onClick={handleResendOTP}
-            disabled={loading || countdown > 0}
-            style={{ background: 'none', border: 'none', color: countdown > 0 ? '#aaa' : '#5b5bd6', cursor: countdown > 0 ? 'not-allowed' : 'pointer', fontSize: '14px' }}
-          >
-            Gửi lại OTP
-          </button>
+            <button
+              type="submit"
+              className="btn btn-primary w-full mt-2 font-bold shadow-md shadow-primary/25 hover:shadow-lg transition-all duration-200"
+              disabled={loading || countdown === 0 || otp.length !== 6}
+            >
+              {loading ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Đang xác thực...
+                </>
+              ) : 'Xác nhận'}
+            </button>
+          </form>
+
+          <div className="flex justify-between items-center mt-6 text-sm">
+            <button
+              onClick={() => { setStep(1); setError(''); setOtp(''); }}
+              className="btn btn-ghost btn-sm text-primary font-semibold"
+            >
+              ← Quay lại
+            </button>
+            <button
+              onClick={handleResendOTP}
+              disabled={loading || countdown > 0}
+              className={`btn btn-sm font-semibold ${countdown > 0 ? 'btn-ghost text-base-content/30' : 'btn-ghost text-primary'}`}
+            >
+              Gửi lại OTP
+            </button>
+          </div>
         </div>
       </div>
     </div>

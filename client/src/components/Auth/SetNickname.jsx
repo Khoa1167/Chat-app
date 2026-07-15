@@ -59,38 +59,58 @@ export default function SetNickname() {
   };
 
   const getStatusMsg = () => {
-    if (status === 'checking') return <span className="status-checking">⏳ Đang kiểm tra...</span>;
-    if (status === 'available') return <span className="status-available">✅ Tên hiển thị có thể dùng</span>;
-    if (status === 'taken') return <span className="status-taken">❌ Tên hiển thị đã tồn tại, vui lòng chọn tên khác</span>;
+    if (status === 'checking') return <span className="text-xs text-info flex items-center gap-1 mt-1">⏳ Đang kiểm tra...</span>;
+    if (status === 'available') return <span className="text-xs text-success flex items-center gap-1 mt-1">✅ Tên hiển thị có thể dùng</span>;
+    if (status === 'taken') return <span className="text-xs text-error flex items-center gap-1 mt-1">❌ Tên hiển thị đã tồn tại, vui lòng chọn tên khác</span>;
     return null;
   };
 
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h1>Đặt tên hiển thị</h1>
-        <p className="auth-desc">
-          Tên hiển thị là tên người khác thấy khi bạn chat.
-          Bạn có thể thay đổi sau.
-        </p>
-        {error && <p className="error-msg">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <input
-            placeholder="Tên hiển thị (nickname)"
-            value={nickname}
-            onChange={e => setNickname(e.target.value)}
-            required
-            minLength={2}
-            maxLength={30}
-          />
-          <div className="status-msg">{getStatusMsg()}</div>
-          <button
-            type="submit"
-            disabled={loading || status !== 'available'}
-          >
-            {loading ? 'Đang lưu...' : 'Xác nhận'}
-          </button>
-        </form>
+    <div className="min-h-screen flex items-center justify-center bg-base-200 px-4" data-theme="light">
+      <div className="card w-full max-w-md bg-base-100 shadow-2xl border border-base-300/50">
+        <div className="card-body p-8">
+          <h1 className="text-3xl font-bold text-center text-primary mb-2">Biệt danh</h1>
+          <p className="text-sm text-center text-base-content/70 mb-6">
+            Tên hiển thị là tên người khác thấy khi bạn chat. Bạn có thể thay đổi sau.
+          </p>
+          
+          {error && (
+            <div className="alert alert-error shadow-sm py-3 mb-4 rounded-lg">
+              <span className="text-sm font-medium">{error}</span>
+            </div>
+          )}
+          
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text font-semibold text-base-content/80">Tên hiển thị (nickname)</span>
+              </label>
+              <input
+                className="input input-bordered focus:input-primary w-full transition-all duration-200"
+                placeholder="Nhập tên hiển thị..."
+                value={nickname}
+                onChange={e => setNickname(e.target.value)}
+                required
+                minLength={2}
+                maxLength={30}
+              />
+              <div className="min-h-[20px]">{getStatusMsg()}</div>
+            </div>
+            
+            <button
+              type="submit"
+              className="btn btn-primary w-full mt-2 font-bold shadow-md shadow-primary/25 hover:shadow-lg transition-all duration-200"
+              disabled={loading || status !== 'available'}
+            >
+              {loading ? (
+                <>
+                  <span className="loading loading-spinner loading-sm"></span>
+                  Đang lưu...
+                </>
+              ) : 'Xác nhận'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );

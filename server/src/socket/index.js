@@ -13,6 +13,7 @@ const setupSocket = (io) => {
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       socket.user = await User.findById(decoded.id).select('-password');
       if (!socket.user) return next(new Error('User not found'));
+      socket.data.user = socket.user;
       next();
     } catch {
       next(new Error('Authentication error'));
@@ -77,7 +78,7 @@ const setupSocket = (io) => {
 
         const idx = msg.reactions.findIndex(r => r.emoji === emoji);
         if (idx > -1) {
-          const uIdx = msg.reactions[idx].users.indexOf(userId);
+          const uIdx = msg.reactions[idx].users.findIndex(u => u.toString() === userId.toString());
           if (uIdx > -1) msg.reactions[idx].users.splice(uIdx, 1);
           else msg.reactions[idx].users.push(userId);
           if (msg.reactions[idx].users.length === 0) msg.reactions.splice(idx, 1);
@@ -122,7 +123,7 @@ const setupSocket = (io) => {
       try {
         const receiverSockets = await io.fetchSockets();
         const receiverSocket = receiverSockets.find(
-          s => s.user?._id.toString() === receiverId
+          s => s.data.user?._id.toString() === receiverId
         );
 
         if (receiverSocket) {
@@ -143,7 +144,7 @@ const setupSocket = (io) => {
         // Tìm socket của sender và thông báo
         const allSockets = await io.fetchSockets();
         const senderSocket = allSockets.find(
-          s => s.user?._id.toString() === senderId
+          s => s.data.user?._id.toString() === senderId
         );
 
         if (senderSocket) {
@@ -164,7 +165,7 @@ const setupSocket = (io) => {
     socket.on('disconnect', async () => {
       const activeSockets = await io.fetchSockets();
       const hasOtherConnections = activeSockets.some(
-        s => s.user?._id.toString() === userId.toString()
+        s => s.data.user?._id.toString() === userId.toString()
       );
 
       if (!hasOtherConnections) {

@@ -125,7 +125,7 @@ router.put('/accept/:friendshipId', protect, async (req, res) => {
       const populatedDmRoom = await Room.findById(dmRoom._id).populate('members', 'username nickname avatar isOnline');
       
       allSockets.forEach(s => {
-        if (s.user && memberIds.includes(s.user._id.toString())) {
+        if (s.data.user && memberIds.includes(s.data.user._id.toString())) {
           s.join(dmRoom._id.toString());
           s.emit('room:added', populatedDmRoom);
         }
