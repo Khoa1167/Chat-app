@@ -152,4 +152,72 @@ router.post('/upload-audio', protect, upload.single('audio'), async (req, res) =
   }
 });
 
+// POST /api/rooms/upload-image — tải lên hình ảnh
+router.post('/upload-image', protect, upload.single('image'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Không tìm thấy tệp hình ảnh' });
+    }
+
+    const uploadToCloudinary = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'chat-app/images',
+            resource_type: 'image',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        const readable = new Readable();
+        readable._read = () => {};
+        readable.push(fileBuffer);
+        readable.push(null);
+        readable.pipe(uploadStream);
+      });
+    };
+
+    const result = await uploadToCloudinary(req.file.buffer);
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/rooms/upload-file — tải lên tệp tin chung
+router.post('/upload-file', protect, upload.single('file'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Không tìm thấy tệp tin' });
+    }
+
+    const uploadToCloudinary = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'chat-app/files',
+            resource_type: 'raw',
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        const readable = new Readable();
+        readable._read = () => {};
+        readable.push(fileBuffer);
+        readable.push(null);
+        readable.pipe(uploadStream);
+      });
+    };
+
+    const result = await uploadToCloudinary(req.file.buffer);
+    res.json({ url: result.secure_url });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = router;

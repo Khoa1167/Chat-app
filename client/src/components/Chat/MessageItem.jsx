@@ -68,7 +68,7 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
         <div className="relative flex flex-col max-w-full">
           <div 
             className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words shadow-2xs ${
-              message.type === 'audio'
+              message.type === 'audio' || message.type === 'image' || message.type === 'file'
                 ? 'bg-transparent shadow-none'
                 : isOwn 
                   ? 'bg-gradient-to-r from-[#006aff] to-[#00b2ff] text-white rounded-2xl rounded-br-[4px] px-3.5 py-2' 
@@ -82,6 +82,38 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
                 controls 
                 className={`max-w-[240px] rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
               />
+            ) : message.type === 'image' ? (
+              <img 
+                src={message.content} 
+                alt="Hình ảnh đính kèm" 
+                className="max-w-[240px] max-h-[240px] rounded-2xl cursor-pointer object-cover border border-gray-100 shadow-xs hover:opacity-90 transition-opacity" 
+                onClick={() => window.open(message.content, '_blank')} 
+              />
+            ) : message.type === 'file' ? (
+              <div className={`flex items-center gap-3 rounded-2xl p-3.5 max-w-[240px] border shadow-3xs ${
+                isOwn 
+                  ? 'bg-[#0084ff] border-[#007be6] text-white' 
+                  : 'bg-[#f0f2f5] border-gray-200 text-black'
+              }`}>
+                <span className="text-2xl select-none">📄</span>
+                <div className="flex flex-col min-w-0">
+                  <a 
+                    href={message.content} 
+                    download 
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className={`text-[13px] font-semibold truncate hover:underline cursor-pointer ${
+                      isOwn ? 'text-white' : 'text-[#0084ff]'
+                    }`}
+                    title={message.fileName || 'Tải file'}
+                  >
+                    {message.fileName || 'Tệp đính kèm'}
+                  </a>
+                  <span className={`text-[10px] font-medium mt-0.5 ${isOwn ? 'text-blue-100' : 'text-gray-400'}`}>
+                    Tệp đính kèm
+                  </span>
+                </div>
+              </div>
             ) : (
               message.content
             )}

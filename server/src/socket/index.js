@@ -37,13 +37,14 @@ const setupSocket = (io) => {
 
     // ===== EVENTS: TIN NHẮN =====
 
-    socket.on('message:send', async ({ roomId, content, type, replyTo }) => {
+    socket.on('message:send', async ({ roomId, content, type, replyTo, fileName }) => {
       try {
         const room = await Room.findOne({ _id: roomId, members: userId });
         if (!room) return socket.emit('error', { message: 'Không có quyền' });
 
         const msg = await Message.create({
           content, sender: userId, room: roomId, type: type || 'text', replyTo: replyTo || null,
+          fileName: fileName || null,
         });
 
         await msg.populate('sender', 'username nickname avatar');

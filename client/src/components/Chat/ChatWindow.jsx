@@ -24,6 +24,19 @@ export default function ChatWindow({ room, onBackToFriends }) {
   );
   const [showMembers, setShowMembers] = useState(true);
   const bottomRef = useRef(null);
+  const [showScrollBottom, setShowScrollBottom] = useState(false);
+  const containerRef = useRef(null);
+
+  const scrollToBottom = () => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  const handleScroll = () => {
+    if (!containerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+    const isFar = scrollHeight - scrollTop - clientHeight > 300;
+    setShowScrollBottom(isFar);
+  };
 
   // Load tin nhắn khi chọn phòng mới
   useEffect(() => {
@@ -97,8 +110,8 @@ export default function ChatWindow({ room, onBackToFriends }) {
 
   const roomId = room?._id;
 
-  const handleSend = useCallback((content, replyToId, type = 'text') => {
-    emit('message:send', { roomId, content, type, replyTo: replyToId });
+  const handleSend = useCallback((content, replyToId, type = 'text', fileName = null) => {
+    emit('message:send', { roomId, content, type, replyTo: replyToId, fileName });
     setReplyTo(null);
   }, [emit, roomId]);
 
@@ -139,7 +152,7 @@ export default function ChatWindow({ room, onBackToFriends }) {
   return (
     <div className="flex-1 flex flex-row h-full overflow-hidden bg-white text-black">
       {/* Vùng chat chính (giữa) */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-white">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden bg-white relative">
         
         {/* Header phòng chat — màu trắng Messenger */}
         <div className="h-[60px] border-b border-gray-200 px-4 flex items-center justify-between bg-white flex-shrink-0 z-10">
@@ -205,7 +218,11 @@ export default function ChatWindow({ room, onBackToFriends }) {
         </div>
 
         {/* Danh sách tin nhắn */}
-        <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 hide-scrollbar bg-white">
+        <div 
+          ref={containerRef}
+          onScroll={handleScroll}
+          className="flex-1 overflow-y-auto p-4 flex flex-col gap-2.5 hide-scrollbar bg-white"
+        >
           {hasMore && (
             <button className="bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors self-center mb-4 text-xs font-semibold py-1.5 px-4 rounded-full shadow-xs cursor-pointer active:scale-95" onClick={loadMore}>
               Xem tin nhắn cũ hơn
@@ -236,6 +253,18 @@ export default function ChatWindow({ room, onBackToFriends }) {
           )}
           <div ref={bottomRef} />
         </div>
+
+        {showScrollBottom && (
+          <button
+            onClick={scrollToBottom}
+            className="absolute bottom-20 right-6 w-10 h-10 rounded-full bg-white hover:bg-gray-50 border border-gray-200 shadow-md flex items-center justify-center text-gray-600 hover:text-[#0084ff] transition-all active:scale-95 cursor-pointer z-20 animate-bounce"
+            title="Cuộn xuống dưới"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </button>
+        )}
 
         {/* Ô nhập tin nhắn */}
         <div className="flex-shrink-0">
