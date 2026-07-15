@@ -1,12 +1,63 @@
 import { format } from 'date-fns';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { useSocket } from '../../hooks/useSocket';
 
 const EMOJIS = ['👍', '❤️', '😂', '😮', '😢'];
 
-export default function MessageItem({ message, onReact, onReply, isDM }) {
+export default function MessageItem({ message, onReact, onReply, isDM, onForwardClick }) {
   const { user } = useAuth();
+  const { emit } = useSocket();
   const isOwn = message.sender._id?.toString() === user._id?.toString();
   const senderName = message.sender.nickname || message.sender.username;
+
+  const [showActions, setShowActions] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editValue, setEditValue] = useState('');
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(message.content)
+      .then(() => alert('Đã sao chép tin nhắn vào bộ nhớ tạm'))
+      .catch(err => console.error('Không thể sao chép:', err));
+    setShowActions(false);
+  };
+
+  const handleRecall = () => {
+    if (confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
+      emit('message:delete', { messageId: message._id });
+    }
+    setShowActions(false);
+  };
+
+  const handleStartEdit = () => {
+    setIsEditing(true);
+    setEditValue(message.content);
+    setShowActions(false);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editValue.trim()) return;
+    emit('message:edit', { messageId: message._id, newContent: editValue });
+    setIsEditing(false);
+  };
+
+  const handleForward = () => {
+    setShowActions(false);
+    if (onForwardClick) onForwardClick(message);
+  };
+
+  const handleToggleActions = (e) => {
+    e.stopPropagation();
+    setShowActions(prev => !prev);
+  };
+
+  // Đóng dropdown menu khi click bất cứ đâu ngoài màn hình
+  useEffect(() => {
+    if (!showActions) return;
+    const handleClose = () => setShowActions(false);
+    document.addEventListener('click', handleClose);
+    return () => document.removeEventListener('click', handleClose);
+  }, [showActions]);
 
   // Cuộn mượt đến vị trí tin nhắn gốc được trả lời kèm hiệu ứng chớp tắt highlight
   const handleScrollToOriginal = () => {
@@ -83,10 +134,12 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
 
           {/* Snippet of content (optimized và ẩn Cloudinary URL) */}
           <span className="text-gray-400 truncate max-w-[200px] italic">
-            {message.replyTo.type === 'audio' ? 'Tin nhắn thoại' : 
-             message.replyTo.type === 'image' ? '[Hình ảnh]' : 
-             message.replyTo.type === 'file' ? `[Tệp: ${message.replyTo.fileName || 'Tài liệu'}]` : 
-             message.replyTo.content}
+            {message.replyTo.isDeleted ? 'Tin nhắn đã bị thu hồi' : (
+              message.replyTo.type === 'audio' ? 'Tin nhắn thoại' : 
+              message.replyTo.type === 'image' ? '[Hình ảnh]' : 
+              message.replyTo.type === 'file' ? `[Tệp: ${message.replyTo.fileName || 'Tài liệu'}]` : 
+              message.replyTo.content
+            )}
           </span>
         </div>
       )}
@@ -158,7 +211,42 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
                 </div>
               </div>
             ) : (
-              message.content
+              isEditing ? (
+                <div className="flex flex-col gap-1.5 min-w-[200px] py-1">
+                  <textarea
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    className="w-full text-xs p-2 border border-gray-300 rounded-lg bg-white text-black outline-none resize-none focus:border-blue-500 font-sans"
+                    rows={2}
+                  />
+                  <div className="flex justify-end gap-1.5">
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="text-[9px] px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded-md font-bold cursor-pointer transition-colors"
+                    >
+                      Hủy
+                    </button>
+                    <button 
+                      onClick={handleSaveEdit}
+                      className="text-[9px] px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white rounded-md font-bold cursor-pointer transition-colors"
+                    >
+                      Lưu
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <span>
+                  {message.content}
+                  {message.isEdited && (
+                    <span 
+                      className="text-[9px] opacity-60 ml-1.5 select-none font-medium text-inherit"
+                      title="Tin nhắn đã qua chỉnh sửa"
+                    >
+                      (đã chỉnh sửa)
+                    </span>
+                  )}
+                </span>
+              )
             )}
           </div>
 
@@ -205,10 +293,12 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
           )}
         </div>
 
-        {/* Hover Menu thao tác kiểu Messenger (Emoji + Trả lời) */}
-        <div className={`absolute top-1/2 -translate-y-1/2 opacity-0 group-hover/msg:opacity-100 flex gap-0.5 bg-white border border-gray-200 shadow-sm p-1 rounded-full z-20 transition-opacity ${
-          isOwn ? 'left-[-140px]' : 'right-[-140px]'
-        }`}>
+        {/* Hover Menu thao tác kiểu Messenger (Emoji + Trả lời + Menu 3 chấm ⋮) */}
+        <div 
+          className={`absolute top-1/2 -translate-y-1/2 flex gap-0.5 bg-white border border-gray-200 shadow-sm p-1 rounded-full z-20 transition-all ${
+            isOwn ? 'left-[-170px]' : 'right-[-170px]'
+          } ${showActions ? 'opacity-100 pointer-events-auto scale-100' : 'opacity-0 scale-95 pointer-events-none group-hover/msg:opacity-100 group-hover/msg:pointer-events-auto group-hover/msg:scale-100'}`}
+        >
           {EMOJIS.map(emoji => (
             <button 
               key={emoji} 
@@ -224,6 +314,55 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
           >
             Reply
           </button>
+          
+          {/* Nút 3 chấm mở rộng hành động */}
+          <div className="relative">
+            <button 
+              onClick={handleToggleActions}
+              className="w-5 h-5 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded-full cursor-pointer transition-colors text-xs font-bold"
+              title="Thao tác khác"
+            >
+              ⋮
+            </button>
+
+            {/* Dropdown Menu hành động */}
+            {showActions && (
+              <div className={`absolute bottom-full mb-2 bg-white border border-gray-200 rounded-lg shadow-lg py-1 min-w-[100px] z-30 ${
+                isOwn ? 'right-0' : 'left-0'
+              }`}>
+                {message.type === 'text' && (
+                  <button
+                    onClick={handleCopy}
+                    className="w-full text-left px-3 py-1.5 text-[10px] text-gray-700 hover:bg-gray-100 font-semibold cursor-pointer"
+                  >
+                    Sao chép
+                  </button>
+                )}
+                <button
+                  onClick={handleForward}
+                  className="w-full text-left px-3 py-1.5 text-[10px] text-gray-700 hover:bg-gray-100 font-semibold cursor-pointer"
+                >
+                  Chuyển tiếp
+                </button>
+                {isOwn && message.type === 'text' && (
+                  <button
+                    onClick={handleStartEdit}
+                    className="w-full text-left px-3 py-1.5 text-[10px] text-gray-700 hover:bg-gray-100 font-semibold cursor-pointer"
+                  >
+                    Chỉnh sửa
+                  </button>
+                )}
+                {isOwn && (
+                  <button
+                    onClick={handleRecall}
+                    className="w-full text-left px-3 py-1.5 text-[10px] text-red-600 hover:bg-red-50 font-bold cursor-pointer"
+                  >
+                    Thu hồi
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
 
       </div>

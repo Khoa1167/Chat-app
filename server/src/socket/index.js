@@ -51,7 +51,7 @@ const setupSocket = (io) => {
         if (replyTo) {
           await msg.populate({
             path: 'replyTo',
-            select: 'sender content type fileName',
+            select: 'sender content type fileName isDeleted',
             populate: { path: 'sender', select: 'username nickname avatar' }
           });
         }
@@ -93,6 +93,23 @@ const setupSocket = (io) => {
         io.to(msg.room.toString()).emit('message:reacted', {
           messageId, reactions: msg.reactions,
         });
+      } catch (err) {
+        socket.emit('error', { message: err.message });
+      }
+    });
+
+    socket.on('message:edit', async ({ messageId, newContent }) => {
+      try {
+        const msg = await Message.findOne({ _id: messageId, sender: userId });
+        if (!msg) return socket.emit('error', { message: 'Không có quyền chỉnh sửa tin nhắn này' });
+        if (msg.isDeleted) return socket.emit('error', { message: 'Không thể chỉnh sửa tin nhắn đã bị thu hồi' });
+        if (msg.type !== 'text') return socket.emit('error', { message: 'Chỉ có thể chỉnh sửa tin nhắn văn bản' });
+
+        msg.content = newContent;
+        msg.isEdited = true;
+        await msg.save();
+
+        io.to(msg.room.toString()).emit('message:edited', { messageId, newContent, isEdited: true });
       } catch (err) {
         socket.emit('error', { message: err.message });
       }

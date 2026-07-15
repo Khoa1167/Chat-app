@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSocket } from '../../hooks/useSocket';
 import MessageItem from './MessageItem';
 import MessageInput from './MessageInput';
+import ForwardModal from './ForwardModal';
 import api from '../../services/api';
 
 // Lấy thông tin người đang chat cùng trong phòng DM
@@ -23,6 +24,8 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
     () => getDMPartner(room, user)?.isOnline || false
   );
   const [showMembers, setShowMembers] = useState(true);
+  const [forwardTargetMessage, setForwardTargetMessage] = useState(null);
+  const [showForward, setShowForward] = useState(false);
   const bottomRef = useRef(null);
   const [showScrollBottom, setShowScrollBottom] = useState(false);
   const containerRef = useRef(null);
@@ -78,6 +81,13 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
       );
     });
 
+    // Tin nhắn được chỉnh sửa
+    const offEdited = on('message:edited', ({ messageId, newContent, isEdited }) => {
+      setMessages(prev =>
+        prev.map(m => m._id === messageId ? { ...m, content: newContent, isEdited } : m)
+      );
+    });
+
     // Typing indicator
     const offTypingStart = on('typing:start', ({ userId: uid, username, roomId }) => {
       if (roomId === room._id && uid !== user._id) {
@@ -102,7 +112,7 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
     });
 
     return () => {
-      offNew(); offDeleted(); offReacted();
+      offNew(); offDeleted(); offReacted(); offEdited();
       offTypingStart(); offTypingStop();
       offOnline(); offOffline();
     };
@@ -121,6 +131,20 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
 
   const handleReact = useCallback((messageId, emoji) => {
     emit('message:react', { messageId, emoji });
+  }, [emit]);
+
+  const handleForwardClick = useCallback((message) => {
+    setForwardTargetMessage(message);
+    setShowForward(true);
+  }, []);
+
+  const handleForwardSend = useCallback((targetRoomId, originalMsg) => {
+    emit('message:send', {
+      roomId: targetRoomId,
+      content: originalMsg.content,
+      type: originalMsg.type,
+      fileName: originalMsg.fileName
+    });
   }, [emit]);
 
   const loadMore = async () => {
@@ -249,8 +273,6 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
           
           <div className="flex flex-col gap-1.5">
             {messages.map((msg) => {
-              // Messenger không sử dụng cơ chế gộp kiểu timeline Discord, mà dùng bong bóng liên tiếp.
-              // Chúng ta truyền isGrouped = false để hiển thị đầy đủ avatar của các tin nhắn khác nhau.
               return (
                 <MessageItem
                   key={msg._id}
@@ -259,6 +281,7 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
                   onReply={setReplyTo}
                   isGrouped={false}
                   isDM={room.isDM}
+                  onForwardClick={handleForwardClick}
                 />
               );
             })}
@@ -381,6 +404,13 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
           </div>
         </div>
       )}
+      {/* Modal chuyển tiếp tin nhắn */}
+      <ForwardModal
+        isOpen={showForward}
+        onClose={() => setShowForward(false)}
+        messageToForward={forwardTargetMessage}
+        onForward={handleForwardSend}
+      />
     </div>
   );
 }

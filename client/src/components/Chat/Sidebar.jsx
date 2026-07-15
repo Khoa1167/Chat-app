@@ -67,9 +67,9 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
     return off;
   }, [on]);
 
-  // Cập nhật tin nhắn cuối khi có tin nhắn mới
+  // Cập nhật tin nhắn cuối khi có tin nhắn mới, bị xóa hoặc chỉnh sửa
   useEffect(() => {
-    const off = on('message:new', (msg) => {
+    const offNew = on('message:new', (msg) => {
       setRooms(prev =>
         prev.map(r => r._id === msg.room
           ? { ...r, lastMessage: msg, updatedAt: msg.createdAt }
@@ -77,7 +77,30 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
         ).sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
       );
     });
-    return off;
+
+    const offDeleted = on('message:deleted', ({ messageId }) => {
+      setRooms(prev =>
+        prev.map(r => r.lastMessage?._id === messageId
+          ? { ...r, lastMessage: { ...r.lastMessage, isDeleted: true } }
+          : r
+        )
+      );
+    });
+
+    const offEdited = on('message:edited', ({ messageId, newContent, isEdited }) => {
+      setRooms(prev =>
+        prev.map(r => r.lastMessage?._id === messageId
+          ? { ...r, lastMessage: { ...r.lastMessage, content: newContent, isEdited } }
+          : r
+        )
+      );
+    });
+
+    return () => {
+      offNew();
+      offDeleted();
+      offEdited();
+    };
   }, [on]);
 
   // Tạo phòng mới
@@ -310,7 +333,12 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
                         <span className="font-medium mr-1">
                           {lastMsg.sender?._id?.toString() === user._id?.toString() ? 'Bạn:' : `${lastMsg.sender?.nickname || lastMsg.sender?.username}:`}
                         </span>
-                        {lastMsg.content}
+                        {lastMsg.isDeleted ? 'Tin nhắn đã bị thu hồi' : (
+                          lastMsg.type === 'image' ? '[Hình ảnh]' :
+                          lastMsg.type === 'audio' ? '[Tin nhắn thoại]' :
+                          lastMsg.type === 'file' ? `[Tệp: ${lastMsg.fileName || 'Tài liệu'}]` :
+                          lastMsg.content
+                        )}
                       </>
                     ) : (
                       'Chưa có tin nhắn nào'
