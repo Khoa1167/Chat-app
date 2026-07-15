@@ -42,7 +42,9 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
           isOwn ? 'mr-1' : 'ml-10'
         }`}>
           <span className="opacity-75">↩ Trả lời @{message.replyTo.sender?.nickname || message.replyTo.sender?.username}:</span>
-          <span className="font-medium truncate">{message.replyTo.content}</span>
+          <span className="font-medium truncate">
+            {message.replyTo.type === 'audio' ? '🎵 Tin nhắn thoại' : message.replyTo.content}
+          </span>
         </div>
       )}
 
@@ -65,14 +67,24 @@ export default function MessageItem({ message, onReact, onReply, isDM }) {
         {/* Bong bóng tin nhắn */}
         <div className="relative flex flex-col max-w-full">
           <div 
-            className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words px-3.5 py-2 shadow-2xs ${
-              isOwn 
-                ? 'bg-gradient-to-r from-[#006aff] to-[#00b2ff] text-white rounded-2xl rounded-br-[4px]' 
-                : 'bg-[#e4e6eb] text-black rounded-2xl rounded-bl-[4px]'
+            className={`text-[14px] leading-relaxed whitespace-pre-wrap break-words shadow-2xs ${
+              message.type === 'audio'
+                ? 'bg-transparent shadow-none'
+                : isOwn 
+                  ? 'bg-gradient-to-r from-[#006aff] to-[#00b2ff] text-white rounded-2xl rounded-br-[4px] px-3.5 py-2' 
+                  : 'bg-[#e4e6eb] text-black rounded-2xl rounded-bl-[4px] px-3.5 py-2'
             }`}
             title={format(new Date(message.createdAt), 'HH:mm')}
           >
-            {message.content}
+            {message.type === 'audio' ? (
+              <audio 
+                src={message.content} 
+                controls 
+                className={`max-w-[240px] rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
+              />
+            ) : (
+              message.content
+            )}
           </div>
 
           {/* Reactions hiển thị nhỏ ở dưới chân bong bóng chat */}

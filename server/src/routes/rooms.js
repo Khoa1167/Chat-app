@@ -2,6 +2,11 @@ const router  = require('express').Router();
 const Room    = require('../models/Room');
 const Message = require('../models/Message');
 const { protect } = require('../middleware/auth');
+const multer = require('multer');
+const { cloudinary } = require('../config/cloudinary');
+const { Readable } = require('stream');
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 // GET /api/rooms — lấy danh sách phòng của user
 router.get('/', protect, async (req, res) => {
@@ -107,6 +112,41 @@ router.post('/:id/join', protect, async (req, res) => {
     if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
 
     res.json(room);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// POST /api/rooms/upload-audio — tải lên tệp âm thanh (tin nhắn thoại)
+router.post('/upload-audio', protect, upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Không tìm thấy tệp âm thanh' });
+    }
+
+    // Gửi buffer tệp lên Cloudinary qua upload_stream
+    const uploadToCloudinary = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'chat-app/audios',
+            resource_type: 'video', // Cần đặt video để lưu trữ được các định dạng audio (mp3, wav, webm...)
+          },
+          (error, result) => {
+            if (error) return reject(error);
+            resolve(result);
+          }
+        );
+        const readable = new Readable();
+        readable._read = () => {};
+        readable.push(fileBuffer);
+        readable.push(null);
+        readable.pipe(uploadStream);
+      });
+    };
+
+    const result = await uploadToCloudinary(req.file.buffer);
+    res.json({ url: result.secure_url });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -97,8 +97,8 @@ export default function ChatWindow({ room, onBackToFriends }) {
 
   const roomId = room?._id;
 
-  const handleSend = useCallback((content, replyToId) => {
-    emit('message:send', { roomId, content, replyTo: replyToId });
+  const handleSend = useCallback((content, replyToId, type = 'text') => {
+    emit('message:send', { roomId, content, type, replyTo: replyToId });
     setReplyTo(null);
   }, [emit, roomId]);
 
