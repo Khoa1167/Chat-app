@@ -1,11 +1,13 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { useAuth } from './AuthContext';
 
 const SocketContext = createContext(null);
 
 export const SocketProvider = ({ children }) => {
   const [isConnected, setIsConnected] = useState(false);
+  const { user } = useAuth();
 
   const socket = useMemo(() => {
     const token = sessionStorage.getItem('token');
@@ -16,7 +18,7 @@ export const SocketProvider = ({ children }) => {
       reconnectionDelay: 1000,
       reconnectionAttempts: 10,
     });
-  }, []);
+  }, [user?._id]);
 
   useEffect(() => {
     if (!socket) {

@@ -8,7 +8,10 @@ router.get('/', protect, async (req, res) => {
   try {
     const rooms = await Room.find({ members: req.user._id })
       .populate('members', 'username nickname avatar isOnline')
-      .populate('lastMessage')
+      .populate({
+        path: 'lastMessage',
+        populate: { path: 'sender', select: 'username nickname avatar' }
+      })
       .sort({ updatedAt: -1 });
     res.json(rooms);
   } catch (err) {
@@ -54,7 +57,10 @@ router.get('/all', protect, async (req, res) => {
   try {
     const rooms = await Room.find({ isPrivate: false })
       .populate('members', 'username nickname avatar isOnline')
-      .populate('lastMessage')
+      .populate({
+        path: 'lastMessage',
+        populate: { path: 'sender', select: 'username nickname avatar' }
+      })
       .sort({ updatedAt: -1 });
     res.json(rooms);
   } catch (err) {

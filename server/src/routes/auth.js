@@ -154,7 +154,7 @@ router.post('/set-nickname', protect, async (req, res) => {
       return res.status(400).json({ message: 'Tên hiển thị đã tồn tại' });
 
     const user = await User.findByIdAndUpdate(
-      req.user._id, { nickname }, { new: true }
+      req.user._id, { nickname, nicknameChangedAt: new Date() }, { new: true }
     );
     res.json(user);
   } catch (err) {

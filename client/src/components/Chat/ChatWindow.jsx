@@ -35,7 +35,7 @@ export default function ChatWindow({ room, onBackToFriends }) {
         setHasMore(res.data.length === 30);
         setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
       });
-  }, [room, user]);
+  }, [room?._id]);
 
   // Lắng nghe các sự kiện WebSocket
   useEffect(() => {
@@ -93,7 +93,7 @@ export default function ChatWindow({ room, onBackToFriends }) {
       offTypingStart(); offTypingStop();
       offOnline(); offOffline();
     };
-  }, [room, user, on, emit, isConnected]);
+  }, [room?._id, user?._id, on, emit, isConnected]);
 
   const roomId = room?._id;
 
