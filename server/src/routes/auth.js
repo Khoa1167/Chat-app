@@ -50,6 +50,7 @@ router.post('/send-otp', async (req, res) => {
 
     // Gửi email OTP
     await sendOTPEmail(email, otp);
+    console.log(`[DEBUG] OTP for ${email}: ${otp}`);
 
     res.json({ message: 'OTP đã được gửi tới email của bạn' });
   } catch (err) {

@@ -51,7 +51,7 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
         setHasMore(res.data.length === 30);
         setTimeout(() => bottomRef.current?.scrollIntoView(), 100);
       });
-  }, [room?._id]);
+  }, [room]);
 
   // Lắng nghe các sự kiện WebSocket
   useEffect(() => {
@@ -116,7 +116,7 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
       offTypingStart(); offTypingStop();
       offOnline(); offOffline();
     };
-  }, [room?._id, user?._id, on, emit, isConnected]);
+  }, [room, user, on, emit, isConnected]);
 
   const roomId = room?._id;
 
@@ -139,11 +139,16 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
   }, []);
 
   const handleForwardSend = useCallback((targetRoomId, originalMsg) => {
+    if (!originalMsg || originalMsg.isDeleted) {
+      alert('Không thể chuyển tiếp tin nhắn đã bị thu hồi.');
+      return;
+    }
     emit('message:send', {
       roomId: targetRoomId,
       content: originalMsg.content,
       type: originalMsg.type,
-      fileName: originalMsg.fileName
+      fileName: originalMsg.fileName,
+      forwardedFrom: originalMsg._id
     });
   }, [emit]);
 

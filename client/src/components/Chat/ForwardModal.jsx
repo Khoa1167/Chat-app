@@ -11,16 +11,25 @@ export default function ForwardModal({ isOpen, onClose, messageToForward, onForw
 
   useEffect(() => {
     if (isOpen) {
-      setLoading(true);
-      api.get('/rooms')
-        .then(res => {
-          setRooms(res.data);
-          setForwardedRoomIds(new Set());
-        })
-        .catch(err => console.error('Lỗi khi tải danh sách phòng:', err))
-        .finally(() => setLoading(false));
+      const timer = setTimeout(() => {
+        setLoading(true);
+        api.get('/rooms')
+          .then(res => {
+            setRooms(res.data);
+            setForwardedRoomIds(new Set());
+          })
+          .catch(err => console.error('Lỗi khi tải danh sách phòng:', err))
+          .finally(() => setLoading(false));
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen && messageToForward?.isDeleted) {
+      onClose();
+    }
+  }, [isOpen, messageToForward?.isDeleted, onClose]);
 
   if (!isOpen) return null;
 

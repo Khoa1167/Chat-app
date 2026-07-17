@@ -6,7 +6,34 @@ const multer = require('multer');
 const { cloudinary } = require('../config/cloudinary');
 const { Readable } = require('stream');
 
-const upload = multer({ storage: multer.memoryStorage() });
+const uploadAudio = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('audio/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tệp tải lên phải là định dạng âm thanh (audio/*)'), false);
+    }
+  }
+});
+
+const uploadImage = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Tệp tải lên phải là định dạng hình ảnh (image/*)'), false);
+    }
+  }
+});
+
+const uploadFile = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB
+});
 
 // GET /api/rooms — lấy danh sách phòng của user
 router.get('/', protect, async (req, res) => {
@@ -91,6 +118,7 @@ router.get('/:id/messages', protect, async (req, res) => {
     })
       .populate('sender', 'username nickname avatar') // Sửa lỗi hiển thị Nickname
       .populate({ path: 'replyTo', select: 'sender content type fileName isDeleted', populate: { path: 'sender', select: 'username nickname avatar' } })
+      .populate({ path: 'forwardedFrom', select: 'sender', populate: { path: 'sender', select: 'username nickname' } })
       .populate('reactions.users', 'username nickname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
@@ -104,22 +132,35 @@ router.get('/:id/messages', protect, async (req, res) => {
 // POST /api/rooms/:id/join — tham gia phòng
 router.post('/:id/join', protect, async (req, res) => {
   try {
-    const room = await Room.findByIdAndUpdate(
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
+
+    // Bảo mật: Ngăn chặn IDOR (Chỉ cho phép tự động tham gia các phòng công khai)
+    if (room.isPrivate || room.isDM) {
+      return res.status(403).json({ message: 'Không thể tham gia trực tiếp phòng chat riêng tư hoặc cuộc trò chuyện cá nhân' });
+    }
+
+    const updatedRoom = await Room.findByIdAndUpdate(
       req.params.id,
       { $addToSet: { members: req.user._id } },
       { returnDocument: 'after' }
     ).populate('members', 'username nickname avatar isOnline');
 
-    if (!room) return res.status(404).json({ message: 'Phòng không tồn tại' });
-
-    res.json(room);
+    res.json(updatedRoom);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 });
 
 // POST /api/rooms/upload-audio — tải lên tệp âm thanh (tin nhắn thoại)
-router.post('/upload-audio', protect, upload.single('audio'), async (req, res) => {
+router.post('/upload-audio', protect, (req, res, next) => {
+  uploadAudio.single('audio')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Không tìm thấy tệp âm thanh' });
@@ -154,7 +195,14 @@ router.post('/upload-audio', protect, upload.single('audio'), async (req, res) =
 });
 
 // POST /api/rooms/upload-image — tải lên hình ảnh
-router.post('/upload-image', protect, upload.single('image'), async (req, res) => {
+router.post('/upload-image', protect, (req, res, next) => {
+  uploadImage.single('image')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Không tìm thấy tệp hình ảnh' });
@@ -188,7 +236,14 @@ router.post('/upload-image', protect, upload.single('image'), async (req, res) =
 });
 
 // POST /api/rooms/upload-file — tải lên tệp tin chung
-router.post('/upload-file', protect, upload.single('file'), async (req, res) => {
+router.post('/upload-file', protect, (req, res, next) => {
+  uploadFile.single('file')(req, res, (err) => {
+    if (err) {
+      return res.status(400).json({ message: err.message });
+    }
+    next();
+  });
+}, async (req, res) => {
   try {
     if (!req.file) {
       return res.status(400).json({ message: 'Không tìm thấy tệp tin' });

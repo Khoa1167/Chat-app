@@ -144,6 +144,19 @@ export default function MessageItem({ message, onReact, onReply, isDM, onForward
         </div>
       )}
 
+      {/* Nhãn chuyển tiếp tin nhắn */}
+      {message.forwardedFrom && (
+        <div className={`flex items-center text-[10px] text-gray-400 gap-1 mb-0.5 select-none ${isOwn ? 'mr-2' : 'ml-10'}`}>
+          <span>↪</span>
+          <span>
+            Chuyển tiếp từ{' '}
+            <span className="font-semibold text-gray-500">
+              {message.forwardedFrom.sender?.nickname || message.forwardedFrom.sender?.username || 'Người dùng'}
+            </span>
+          </span>
+        </div>
+      )}
+
       {/* Hàng tin nhắn chính */}
       <div className={`flex items-end gap-2.5 max-w-full group/msg relative ${isOwn ? 'flex-row-reverse' : 'flex-row'}`}>
         
@@ -176,7 +189,7 @@ export default function MessageItem({ message, onReact, onReply, isDM, onForward
               <audio 
                 src={message.content} 
                 controls 
-                className={`max-w-[240px] rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
+                className={`w-[360px] max-w-full rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
               />
             ) : message.type === 'image' ? (
               <img 

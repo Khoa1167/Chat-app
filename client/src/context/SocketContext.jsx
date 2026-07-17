@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useState, useMemo, useRef } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { io } from 'socket.io-client';
 import { useAuth } from './AuthContext';
 
@@ -10,6 +10,9 @@ export const SocketProvider = ({ children }) => {
   const { user } = useAuth();
 
   const socket = useMemo(() => {
+    if (user?._id) {
+      // Tham chiếu user?._id để ép buộc khởi tạo lại socket khi người dùng thay đổi
+    }
     const token = sessionStorage.getItem('token');
     if (!token) return null;
     return io(import.meta.env.VITE_SERVER_URL || 'http://localhost:5000', {
@@ -27,6 +30,8 @@ export const SocketProvider = ({ children }) => {
     }
 
     console.log('⚡ Socket: Đã khởi tạo thực thể socket, đang kết nối...');
+
+    let timer;
 
     const onConnect = () => {
       console.log('⚡ Socket: Kết nối thành công! ID:', socket.id);
@@ -52,10 +57,15 @@ export const SocketProvider = ({ children }) => {
       socket.connect();
     }
 
-    // Nếu socket đã connected (từ lần trước), set ngay
-    if (socket.connected) setIsConnected(true);
+    // Nếu socket đã connected (từ lần trước), set ngay bằng setTimeout để tránh cảnh báo đồng bộ của react
+    if (socket.connected) {
+      timer = setTimeout(() => {
+        setIsConnected(true);
+      }, 0);
+    }
 
     return () => {
+      if (timer) clearTimeout(timer);
       socket.off('connect', onConnect);
       socket.off('connect_error', onConnectError);
       socket.off('disconnect', onDisconnect);

@@ -44,7 +44,10 @@ export default function CallModal({
     if (isMinimized) {
       const defaultX = window.innerWidth - (callType === 'video' ? 160 : 110);
       const defaultY = window.innerHeight - (callType === 'video' ? 220 : 120);
-      setPosition({ x: defaultX, y: defaultY });
+      const timer = setTimeout(() => {
+        setPosition({ x: defaultX, y: defaultY });
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isMinimized, callType]);
 

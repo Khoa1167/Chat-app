@@ -204,7 +204,7 @@ export default function ChatPage() {
       targetUserIdRef.current = caller._id;
     });
 
-    const offCallAccept = on('call:accept', async ({ receiverId, signalData }) => {
+    const offCallAccept = on('call:accept', async ({ signalData }) => {
       if (pcRef.current) {
         await pcRef.current.setRemoteDescription(new RTCSessionDescription(signalData));
         setCallState('active');
@@ -230,12 +230,22 @@ export default function ChatPage() {
       cleanupCall();
     });
 
+    const offCallFailed = on('call:failed', ({ reason }) => {
+      if (reason === 'offline') {
+        alert('Người dùng hiện đang ngoại tuyến.');
+      } else {
+        alert('Cuộc gọi thất bại.');
+      }
+      cleanupCall();
+    });
+
     return () => {
       offCallRequest();
       offCallAccept();
       offCallReject();
       offCallIceCandidate();
       offCallEnd();
+      offCallFailed();
     };
   }, [on]);
 

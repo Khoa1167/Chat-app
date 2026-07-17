@@ -37,14 +37,21 @@ const setupSocket = (io) => {
 
     // ===== EVENTS: TIN NHẮN =====
 
-    socket.on('message:send', async ({ roomId, content, type, replyTo, fileName }) => {
+    socket.on('message:send', async ({ roomId, content, type, replyTo, fileName, forwardedFrom }) => {
       try {
         const room = await Room.findOne({ _id: roomId, members: userId });
         if (!room) return socket.emit('error', { message: 'Không có quyền' });
 
+        if (forwardedFrom) {
+          const originalMsg = await Message.findById(forwardedFrom);
+          if (!originalMsg || originalMsg.isDeleted) {
+            return socket.emit('error', { message: 'Không thể chuyển tiếp tin nhắn đã bị thu hồi' });
+          }
+        }
+
         const msg = await Message.create({
           content, sender: userId, room: roomId, type: type || 'text', replyTo: replyTo || null,
-          fileName: fileName || null,
+          fileName: fileName || null, forwardedFrom: forwardedFrom || null,
         });
 
         await msg.populate('sender', 'username nickname avatar');
@@ -53,6 +60,13 @@ const setupSocket = (io) => {
             path: 'replyTo',
             select: 'sender content type fileName isDeleted',
             populate: { path: 'sender', select: 'username nickname avatar' }
+          });
+        }
+        if (forwardedFrom) {
+          await msg.populate({
+            path: 'forwardedFrom',
+            select: 'sender',
+            populate: { path: 'sender', select: 'username nickname' }
           });
         }
         await Room.findByIdAndUpdate(roomId, { lastMessage: msg._id });
@@ -120,6 +134,8 @@ const setupSocket = (io) => {
         const msg = await Message.findOne({ _id: messageId, sender: userId });
         if (!msg) return socket.emit('error', { message: 'Không có quyền' });
         msg.isDeleted = true;
+        msg.content = 'Tin nhắn đã bị thu hồi';
+        msg.fileName = null;
         await msg.save();
         io.to(msg.room.toString()).emit('message:deleted', { messageId });
       } catch (err) {
@@ -145,6 +161,11 @@ const setupSocket = (io) => {
         const receiverSockets = allSockets.filter(
           s => s.data.user?._id.toString() === receiverId
         );
+
+        if (receiverSockets.length === 0) {
+          socket.emit('call:failed', { receiverId, reason: 'offline' });
+          return;
+        }
 
         const callerInfo = {
           _id: socket.user._id,
