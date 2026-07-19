@@ -19,6 +19,7 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
   const [showJoin, setShowJoin] = useState(false);
   const [allRooms, setAllRooms] = useState([]);
   const [showProfile, setShowProfile] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Load danh sách phòng của user
   useEffect(() => {
@@ -204,7 +205,8 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
           <input 
             className="w-full bg-[#f0f2f5] border-none rounded-full py-2 pl-9 pr-4 text-xs text-black placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-300"
             placeholder="Tìm kiếm trên Messenger"
-            disabled
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
           />
           <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
@@ -289,10 +291,18 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
               Chưa có cuộc trò chuyện nào. Hãy tạo phòng mới!
             </p>
           )}
-          {rooms.map(room => {
+          {rooms
+            .filter(room => {
+              const dmPartner = getDMPartner(room, user);
+              const displayName = room.isDM
+                ? (dmPartner?.nickname || 'Người dùng Messenger')
+                : room.name;
+              return displayName.toLowerCase().includes(searchQuery.toLowerCase());
+            })
+            .map(room => {
             const dmPartner = getDMPartner(room, user);
             const displayName = room.isDM
-              ? (dmPartner?.nickname || dmPartner?.username || 'Người dùng Messenger')
+              ? (dmPartner?.nickname || 'Người dùng Messenger')
               : room.name;
 
             const isActive = activeRoom?._id === room._id;

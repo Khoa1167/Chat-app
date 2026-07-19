@@ -157,7 +157,7 @@ export default function FriendList({ onSelectDM }) {
                         <img src={friend.avatar} alt="avatar" className="w-10 h-10 rounded-full object-cover" />
                       ) : (
                         <div className="w-full h-full bg-[#0084ff] flex items-center justify-center text-white">
-                          {(friend?.nickname || friend?.username || '?')[0].toUpperCase()}
+                          {(friend?.nickname || '?')[0].toUpperCase()}
                         </div>
                       )}
                     </div>
@@ -166,8 +166,7 @@ export default function FriendList({ onSelectDM }) {
                     }`} />
                   </div>
                   <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-sm font-bold text-gray-900 truncate">{friend?.nickname || friend?.username}</span>
-                    <span className="text-xs text-gray-500 truncate">@{friend?.username}</span>
+                    <span className="text-sm font-bold text-gray-900 truncate">{friend?.nickname || 'Người dùng'}</span>
                   </div>
                 </div>
                 <button className="bg-[#0084ff] hover:bg-[#0073de] text-white font-bold text-xs px-4 py-2 rounded-full transition-colors cursor-pointer" onClick={() => openDM(friend?._id)}>
@@ -230,11 +229,10 @@ export default function FriendList({ onSelectDM }) {
               <div key={user._id} className="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 border-b border-gray-100 transition-all duration-150">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-gray-200 text-gray-700 flex items-center justify-center font-bold text-base flex-shrink-0">
-                    {(user.nickname || user.username)[0].toUpperCase()}
+                    {(user.nickname || '?')[0].toUpperCase()}
                   </div>
                   <div className="flex flex-col min-w-0 leading-tight">
-                    <span className="text-sm font-bold text-gray-900 truncate">{user.nickname || user.username}</span>
-                    <span className="text-xs text-gray-500 truncate">@{user.username}</span>
+                    <span className="text-sm font-bold text-gray-900 truncate">{user.nickname || 'Người dùng'}</span>
                   </div>
                 </div>
                 <button

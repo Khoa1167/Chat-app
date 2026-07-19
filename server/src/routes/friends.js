@@ -44,11 +44,8 @@ router.get('/search', protect, async (req, res) => {
 
     const users = await User.find({
       _id: { $ne: req.user._id },
-      $or: [
-        { username: { $regex: escapedQuery, $options: 'i' } },
-        { nickname: { $regex: escapedQuery, $options: 'i' } },
-      ],
-    }).select('username nickname avatar isOnline').limit(20);
+      nickname: { $regex: escapedQuery, $options: 'i' }
+    }).select('nickname avatar isOnline').limit(20);
 
     res.json(users);
   } catch (err) {

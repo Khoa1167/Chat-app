@@ -4,18 +4,18 @@ import api from '../../services/api';
 
 export default function ProfileModal({ onClose }) {
   const { user, setUser } = useAuth();
-  const [tab, setTab]     = useState('info'); // 'info' | 'password'
+  const [tab, setTab] = useState('info'); // 'info' | 'password'
   const [now] = useState(() => Date.now());
-  const fileInputRef      = useRef(null);
+  const fileInputRef = useRef(null);
 
   // ── Form thông tin ──
-  const [form, setForm]   = useState({
+  const [form, setForm] = useState({
     nickname: user.nickname || '',
-    email:    user.email || '',
-    phone:    user.phone || '',
+    email: user.email || '',
+    phone: user.phone || '',
   });
   const [nicknameStatus, setNicknameStatus] = useState('');
-  const [infoError, setInfoError]   = useState('');
+  const [infoError, setInfoError] = useState('');
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoSuccess, setInfoSuccess] = useState('');
 
@@ -23,13 +23,13 @@ export default function ProfileModal({ onClose }) {
   const [pwForm, setPwForm] = useState({
     currentPassword: '', newPassword: '', confirmPassword: ''
   });
-  const [pwError, setPwError]     = useState('');
+  const [pwError, setPwError] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
   const [pwSuccess, setPwSuccess] = useState('');
 
   // ── Avatar ──
   const [avatarPreview, setAvatarPreview] = useState(user.avatar || '');
-  const [avatarFile, setAvatarFile]       = useState(null);
+  const [avatarFile, setAvatarFile] = useState(null);
   const [avatarLoading, setAvatarLoading] = useState(false);
 
   // Kiểm tra nickname realtime
@@ -120,7 +120,7 @@ export default function ProfileModal({ onClose }) {
   const getNicknameMsg = () => {
     if (nicknameStatus === 'checking') return <span className="text-xs text-info flex items-center gap-1 mt-1">⏳ Đang kiểm tra...</span>;
     if (nicknameStatus === 'available') return <span className="text-xs text-success flex items-center gap-1 mt-1">✅ Có thể dùng</span>;
-    if (nicknameStatus === 'taken')    return <span className="text-xs text-error flex items-center gap-1 mt-1">❌ Đã tồn tại</span>;
+    if (nicknameStatus === 'taken') return <span className="text-xs text-error flex items-center gap-1 mt-1">❌ Đã tồn tại</span>;
     return null;
   };
 
@@ -136,7 +136,7 @@ export default function ProfileModal({ onClose }) {
         <div className="overflow-y-auto max-h-[70vh] p-6 hide-scrollbar flex flex-col gap-5 bg-white">
           {/* Avatar Section */}
           <div className="flex flex-col items-center gap-3">
-            <div 
+            <div
               className="group relative cursor-pointer shadow-md rounded-full"
               onClick={() => fileInputRef.current.click()}
             >
@@ -151,7 +151,7 @@ export default function ProfileModal({ onClose }) {
                 📷
               </div>
             </div>
-            
+
             <input
               type="file"
               ref={fileInputRef}
@@ -159,7 +159,7 @@ export default function ProfileModal({ onClose }) {
               className="hidden"
               onChange={handleSelectAvatar}
             />
-            
+
             {avatarFile && (
               <button
                 className="bg-[#0084ff] hover:bg-[#0073de] text-white font-bold text-xs px-4 py-1.5 rounded-full transition-colors cursor-pointer"
@@ -173,14 +173,14 @@ export default function ProfileModal({ onClose }) {
 
           {/* Tabs */}
           <div className="flex border-b border-gray-100 w-full mb-2">
-            <button 
-              className={`flex-1 font-bold text-xs pb-2 border-b-2 text-center transition-colors cursor-pointer ${tab === 'info' ? 'border-[#0084ff] text-[#0084ff]' : 'border-transparent text-gray-500 hover:text-black'}`} 
+            <button
+              className={`flex-1 font-bold text-xs pb-2 border-b-2 text-center transition-colors cursor-pointer ${tab === 'info' ? 'border-[#0084ff] text-[#0084ff]' : 'border-transparent text-gray-500 hover:text-black'}`}
               onClick={() => setTab('info')}
             >
               Thông tin tài khoản
             </button>
-            <button 
-              className={`flex-1 font-bold text-xs pb-2 border-b-2 text-center transition-colors cursor-pointer ${tab === 'password' ? 'border-[#0084ff] text-[#0084ff]' : 'border-transparent text-gray-500 hover:text-black'}`} 
+            <button
+              className={`flex-1 font-bold text-xs pb-2 border-b-2 text-center transition-colors cursor-pointer ${tab === 'password' ? 'border-[#0084ff] text-[#0084ff]' : 'border-transparent text-gray-500 hover:text-black'}`}
               onClick={() => setTab('password')}
             >
               Đổi mật khẩu
@@ -244,7 +244,7 @@ export default function ProfileModal({ onClose }) {
                   className="bg-white border border-gray-200 text-black focus:border-[#0084ff] focus:ring-1 focus:ring-[#0084ff] rounded-lg py-2 px-3 text-sm outline-none w-full"
                   value={form.phone}
                   onChange={e => setForm({ ...form, phone: e.target.value })}
-                  placeholder="Chưa cấu hình"
+                  placeholder="Chưa thêm số điện thoại"
                 />
               </div>
 
