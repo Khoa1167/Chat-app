@@ -3,6 +3,8 @@ const User       = require('../models/User');
 const Message    = require('../models/Message');
 const Room       = require('../models/Room');
 const Friendship = require('../models/Friendship');
+const { encrypt, decrypt } = require('../utils/crypto');
+
 
 const setupSocket = (io) => {
 
@@ -42,6 +44,8 @@ const setupSocket = (io) => {
         const room = await Room.findOne({ _id: roomId, members: userId });
         if (!room) return socket.emit('error', { message: 'Không có quyền' });
 
+
+
         if (forwardedFrom) {
           const originalMsg = await Message.findById(forwardedFrom);
           if (!originalMsg || originalMsg.isDeleted) {
@@ -49,29 +53,53 @@ const setupSocket = (io) => {
           }
         }
 
+        // Mã hóa nội dung tin nhắn trước khi lưu vào database
+        const encrypted = encrypt(content);
         const msg = await Message.create({
-          content, sender: userId, room: roomId, type: type || 'text', replyTo: replyTo || null,
-          fileName: fileName || null, forwardedFrom: forwardedFrom || null,
+          content: encrypted.content,
+          iv: encrypted.iv,
+          tag: encrypted.tag,
+          encryptedKey: encrypted.encryptedKey,
+          sender: userId,
+          room: roomId,
+          type: type || 'text',
+          replyTo: replyTo || null,
+          fileName: fileName || null,
+          forwardedFrom: forwardedFrom || null,
         });
 
         await msg.populate('sender', 'username nickname avatar');
         if (replyTo) {
           await msg.populate({
             path: 'replyTo',
-            select: 'sender content type fileName isDeleted',
+            select: 'sender content type fileName isDeleted iv tag encryptedKey',
             populate: { path: 'sender', select: 'username nickname avatar' }
           });
         }
         if (forwardedFrom) {
           await msg.populate({
             path: 'forwardedFrom',
-            select: 'sender',
+            select: 'sender content iv tag encryptedKey',
             populate: { path: 'sender', select: 'username nickname' }
           });
         }
         await Room.findByIdAndUpdate(roomId, { lastMessage: msg._id });
 
-        io.to(roomId).emit('message:new', msg);
+        // Gửi bản rõ qua Socket để client hiển thị ngay lập tức
+        const clientMsg = msg.toObject();
+        clientMsg.content = content; // Trả về nội dung chưa mã hóa
+        clientMsg.isEncryptedAtRest = true;
+
+        if (clientMsg.replyTo && clientMsg.replyTo.content) {
+          clientMsg.replyTo.content = decrypt(clientMsg.replyTo.content, clientMsg.replyTo.iv, clientMsg.replyTo.tag, clientMsg.replyTo.encryptedKey);
+          clientMsg.replyTo.isEncryptedAtRest = true;
+        }
+        if (clientMsg.forwardedFrom && clientMsg.forwardedFrom.content) {
+          clientMsg.forwardedFrom.content = decrypt(clientMsg.forwardedFrom.content, clientMsg.forwardedFrom.iv, clientMsg.forwardedFrom.tag, clientMsg.forwardedFrom.encryptedKey);
+          clientMsg.forwardedFrom.isEncryptedAtRest = true;
+        }
+
+        io.to(roomId).emit('message:new', clientMsg);
       } catch (err) {
         socket.emit('error', { message: err.message });
       }
@@ -119,7 +147,14 @@ const setupSocket = (io) => {
         if (msg.isDeleted) return socket.emit('error', { message: 'Không thể chỉnh sửa tin nhắn đã bị thu hồi' });
         if (msg.type !== 'text') return socket.emit('error', { message: 'Chỉ có thể chỉnh sửa tin nhắn văn bản' });
 
-        msg.content = newContent;
+
+
+        // Mã hóa lại nội dung mới trước khi lưu
+        const encrypted = encrypt(newContent);
+        msg.content = encrypted.content;
+        msg.iv = encrypted.iv;
+        msg.tag = encrypted.tag;
+        msg.encryptedKey = encrypted.encryptedKey;
         msg.isEdited = true;
         await msg.save();
 
@@ -135,6 +170,8 @@ const setupSocket = (io) => {
         if (!msg) return socket.emit('error', { message: 'Không có quyền' });
         msg.isDeleted = true;
         msg.content = 'Tin nhắn đã bị thu hồi';
+        msg.iv = null;
+        msg.tag = null;
         msg.fileName = null;
         await msg.save();
         io.to(msg.room.toString()).emit('message:deleted', { messageId });

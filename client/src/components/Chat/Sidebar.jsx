@@ -173,24 +173,28 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
           <div className="flex gap-2">
             <button 
               onClick={handleShowJoin} 
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-sm"
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-gray-600"
               title="Tìm phòng chat công khai"
             >
-              🔍
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z" />
+              </svg>
             </button>
             <button 
               onClick={() => setShowCreate(!showCreate)} 
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-base font-bold"
+              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center cursor-pointer transition-colors text-base font-bold text-gray-700"
               title="Tạo phòng chat mới"
             >
               +
             </button>
             <button 
               onClick={logout} 
-              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center cursor-pointer transition-colors text-xs text-red-500 font-bold"
+              className="w-8 h-8 rounded-full bg-red-50 hover:bg-red-100 flex items-center justify-center cursor-pointer transition-colors text-red-500"
               title="Đăng xuất"
             >
-              ⏻
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-4 h-4">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M19.5 8.25l3.75 3.75m0 0l-3.75 3.75m3.75-3.75H12" />
+              </svg>
             </button>
           </div>
         </div>
@@ -202,7 +206,11 @@ export default function Sidebar({ activeRoom, onSelectRoom }) {
             placeholder="Tìm kiếm trên Messenger"
             disabled
           />
-          <span className="absolute left-3.5 top-2.5 text-gray-400 text-xs">🔍</span>
+          <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2.5} stroke="currentColor" className="w-3.5 h-3.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.604 10.604z" />
+            </svg>
+          </span>
         </div>
       </div>
 

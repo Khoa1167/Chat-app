@@ -186,18 +186,22 @@ export default function MessageItem({ message, onReact, onReply, isDM, onForward
             title={format(new Date(message.createdAt), 'HH:mm')}
           >
             {message.type === 'audio' ? (
-              <audio 
-                src={message.content} 
-                controls 
-                className={`w-[360px] max-w-full rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
-              />
+              <div className="relative inline-block">
+                <audio 
+                  src={message.content} 
+                  controls 
+                  className={`w-[360px] max-w-full rounded-lg p-1 ${isOwn ? 'bg-blue-50' : 'bg-gray-100'} focus:outline-none`} 
+                />
+              </div>
             ) : message.type === 'image' ? (
-              <img 
-                src={message.content} 
-                alt="Hình ảnh đính kèm" 
-                className="max-w-[240px] max-h-[240px] rounded-2xl cursor-pointer object-cover border border-gray-100 shadow-xs hover:opacity-90 transition-opacity" 
-                onClick={() => window.open(message.content, '_blank')} 
-              />
+              <div className="relative inline-block">
+                <img 
+                  src={message.content} 
+                  alt="Hình ảnh đính kèm" 
+                  className="max-w-[240px] max-h-[240px] rounded-2xl cursor-pointer object-cover border border-gray-100 shadow-xs hover:opacity-90 transition-opacity" 
+                  onClick={() => window.open(message.content, '_blank')} 
+                />
+              </div>
             ) : message.type === 'file' ? (
               <div className={`flex items-center gap-3 rounded-2xl p-3.5 max-w-[240px] border shadow-3xs ${
                 isOwn 
@@ -218,7 +222,7 @@ export default function MessageItem({ message, onReact, onReply, isDM, onForward
                   >
                     {message.fileName || 'Tệp đính kèm'}
                   </a>
-                  <span className={`text-[10px] font-medium mt-0.5 ${isOwn ? 'text-blue-100' : 'text-gray-400'}`}>
+                  <span className={`text-[10px] font-medium mt-0.5 ${isOwn ? 'text-blue-100' : 'text-gray-400'} flex items-center gap-1`}>
                     Tệp đính kèm
                   </span>
                 </div>

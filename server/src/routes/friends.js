@@ -39,11 +39,14 @@ router.get('/search', protect, async (req, res) => {
     if (!q || q.trim().length < 2)
       return res.status(400).json({ message: 'Nhập ít nhất 2 ký tự' });
 
+    // Bảo mật: Tránh lỗi regex injection / ReDoS bằng cách escape các ký tự đặc biệt
+    const escapedQuery = q.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+
     const users = await User.find({
       _id: { $ne: req.user._id },
       $or: [
-        { username: { $regex: q, $options: 'i' } },
-        { nickname: { $regex: q, $options: 'i' } },
+        { username: { $regex: escapedQuery, $options: 'i' } },
+        { nickname: { $regex: escapedQuery, $options: 'i' } },
       ],
     }).select('username nickname avatar isOnline').limit(20);
 

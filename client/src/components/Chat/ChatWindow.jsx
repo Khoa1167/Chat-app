@@ -245,10 +245,12 @@ export default function ChatWindow({ room, onBackToFriends, onInitiateCall }) {
                 </button>
                 <button 
                   onClick={() => onInitiateCall(dmPartner, 'video')}
-                  className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 transition-colors text-base cursor-pointer active:scale-95"
+                  className="w-8 h-8 rounded-full hover:bg-gray-100 flex items-center justify-center text-gray-600 transition-colors cursor-pointer active:scale-95"
                   title="Gọi video"
                 >
-                  📹
+                  <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
                 </button>
               </>
             )}

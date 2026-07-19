@@ -2,6 +2,7 @@ const router  = require('express').Router();
 const Room    = require('../models/Room');
 const Message = require('../models/Message');
 const { protect } = require('../middleware/auth');
+const { decrypt } = require('../utils/crypto');
 const multer = require('multer');
 const { cloudinary } = require('../config/cloudinary');
 const { Readable } = require('stream');
@@ -45,7 +46,21 @@ router.get('/', protect, async (req, res) => {
         populate: { path: 'sender', select: 'username nickname avatar' }
       })
       .sort({ updatedAt: -1 });
-    res.json(rooms);
+
+    const decryptedRooms = rooms.map(roomDoc => {
+      const room = roomDoc.toObject();
+      if (room.lastMessage && room.lastMessage.content && !room.lastMessage.isDeleted) {
+        room.lastMessage.content = decrypt(
+          room.lastMessage.content,
+          room.lastMessage.iv,
+          room.lastMessage.tag,
+          room.lastMessage.encryptedKey
+        );
+      }
+      return room;
+    });
+
+    res.json(decryptedRooms);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -94,7 +109,21 @@ router.get('/all', protect, async (req, res) => {
         populate: { path: 'sender', select: 'username nickname avatar' }
       })
       .sort({ updatedAt: -1 });
-    res.json(rooms);
+
+    const decryptedRooms = rooms.map(roomDoc => {
+      const room = roomDoc.toObject();
+      if (room.lastMessage && room.lastMessage.content && !room.lastMessage.isDeleted) {
+        room.lastMessage.content = decrypt(
+          room.lastMessage.content,
+          room.lastMessage.iv,
+          room.lastMessage.tag,
+          room.lastMessage.encryptedKey
+        );
+      }
+      return room;
+    });
+
+    res.json(decryptedRooms);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -117,13 +146,36 @@ router.get('/:id/messages', protect, async (req, res) => {
       isDeleted: false
     })
       .populate('sender', 'username nickname avatar') // Sửa lỗi hiển thị Nickname
-      .populate({ path: 'replyTo', select: 'sender content type fileName isDeleted', populate: { path: 'sender', select: 'username nickname avatar' } })
-      .populate({ path: 'forwardedFrom', select: 'sender', populate: { path: 'sender', select: 'username nickname' } })
+      .populate({ path: 'replyTo', select: 'sender content type fileName isDeleted iv tag encryptedKey', populate: { path: 'sender', select: 'username nickname avatar' } })
+      .populate({ path: 'forwardedFrom', select: 'sender content iv tag encryptedKey', populate: { path: 'sender', select: 'username nickname' } })
       .populate('reactions.users', 'username nickname')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
       .limit(Number(limit));
-    res.json(messages.reverse());
+
+    // Giải mã tin nhắn và các tin nhắn liên quan trước khi gửi về client
+    const decryptedMessages = messages.map(msgDoc => {
+      const msg = msgDoc.toObject();
+      
+      if (!msg.isDeleted && msg.content) {
+        msg.content = decrypt(msg.content, msg.iv, msg.tag, msg.encryptedKey);
+        msg.isEncryptedAtRest = true;
+      }
+      
+      if (msg.replyTo && msg.replyTo.content && !msg.replyTo.isDeleted) {
+        msg.replyTo.content = decrypt(msg.replyTo.content, msg.replyTo.iv, msg.replyTo.tag, msg.replyTo.encryptedKey);
+        msg.replyTo.isEncryptedAtRest = true;
+      }
+
+      if (msg.forwardedFrom && msg.forwardedFrom.content && !msg.forwardedFrom.isDeleted) {
+        msg.forwardedFrom.content = decrypt(msg.forwardedFrom.content, msg.forwardedFrom.iv, msg.forwardedFrom.tag, msg.forwardedFrom.encryptedKey);
+        msg.forwardedFrom.isEncryptedAtRest = true;
+      }
+
+      return msg;
+    });
+
+    res.json(decryptedMessages.reverse());
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
