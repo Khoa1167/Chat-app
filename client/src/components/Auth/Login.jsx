@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 export default function Login() {
-  const [form, setForm]       = useState({ username: '', password: '' });
-  const [error, setError]     = useState('');
-  const [loading, setLoading] = useState(false);
-  const { login }             = useAuth();
-  const navigate              = useNavigate();
+  const [form, setForm]               = useState({ username: '', password: '' });
+  const [error, setError]             = useState('');
+  const [loading, setLoading]         = useState(false);
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const { login }                     = useAuth();
+  const navigate                      = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -50,9 +52,18 @@ export default function Login() {
             </div>
             
             <div className="form-control">
-              <label className="label">
-                <span className="label-text font-semibold text-base-content/80">Mật khẩu</span>
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="label py-1">
+                  <span className="label-text font-semibold text-base-content/80">Mật khẩu</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(true)}
+                  className="text-xs font-semibold text-primary link link-hover"
+                >
+                  Quên mật khẩu?
+                </button>
+              </div>
               <input
                 type="password"
                 className="input input-bordered focus:input-primary w-full transition-all duration-200"
@@ -85,6 +96,11 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        isOpen={isForgotOpen}
+        onClose={() => setIsForgotOpen(false)}
+      />
     </div>
   );
 }

@@ -33,4 +33,28 @@ const sendOTPEmail = async (toEmail, otp) => {
   });
 };
 
-module.exports = { transporter, sendOTPEmail };
+const sendResetPasswordOTPEmail = async (toEmail, otp) => {
+  await transporter.sendMail({
+    from: `"Chat App" <${process.env.SMTP_FROM}>`,
+    to: toEmail,
+    subject: 'Khôi phục mật khẩu - Chat App',
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; border: 1px solid #e0e0e0; border-radius: 12px;">
+        <h2 style="color: #e53e3e; margin-bottom: 8px;">Chat App</h2>
+        <h3 style="color: #2d3748; margin-top: 0;">Yêu cầu lấy lại mật khẩu</h3>
+        <p style="color: #444; margin-bottom: 24px;">Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản liên kết với email này. Đây là mã OTP xác nhận của bạn:</p>
+        <div style="background: #fff5f5; border: 2px dashed #e53e3e; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 24px;">
+          <span style="font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #e53e3e;">
+            ${otp}
+          </span>
+        </div>
+        <p style="color: #666; font-size: 14px;">⏰ Mã có hiệu lực trong <strong>5 phút</strong></p>
+        <p style="color: #666; font-size: 14px;">🔒 Nếu bạn không gửi yêu cầu này, vui lòng bỏ qua email và mật khẩu của bạn sẽ giữ nguyên.</p>
+        <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 24px 0;">
+        <p style="color: #aaa; font-size: 12px;">Email này được gửi tự động từ Chat App.</p>
+      </div>
+    `,
+  });
+};
+
+module.exports = { transporter, sendOTPEmail, sendResetPasswordOTPEmail };

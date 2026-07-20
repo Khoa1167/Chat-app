@@ -1,18 +1,25 @@
 const router      = require('express').Router();
 const jwt         = require('jsonwebtoken');
 const bcrypt      = require('bcryptjs');
-const User        = require('../models/User');
-const PendingUser = require('../models/PendingUser');
-const { protect } = require('../middleware/auth');
-const { sendOTPEmail } = require('../config/mailer');
+const User          = require('../models/User');
+const PendingUser   = require('../models/PendingUser');
+const PasswordReset = require('../models/PasswordReset');
+const { protect }   = require('../middleware/auth');
+const { sendOTPEmail, sendResetPasswordOTPEmail } = require('../config/mailer');
 const { uploadAvatar } = require('../config/cloudinary');
+
+const crypto = require('crypto');
 
 const genToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
-// Tạo OTP 6 số ngẫu nhiên
+// Tạo OTP 6 số ngẫu nhiên an toàn bảo mật (Crypto Secure PRNG)
 const generateOTP = () =>
-  Math.floor(100000 + Math.random() * 900000).toString();
+  crypto.randomInt(100000, 1000000).toString();
+
+// Hash mã OTP bằng SHA-256 trước khi lưu vào DB
+const hashOTP = (otp) =>
+  crypto.createHash('sha256').update(otp).digest('hex');
 
 // ─── POST /api/auth/send-otp ───────────────────────────────────────────────
 router.post('/send-otp', async (req, res) => {
@@ -271,6 +278,171 @@ router.post('/avatar', protect, uploadAvatar.single('avatar'), async (req, res) 
     res.json(user);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+});
+
+// ─── POST /api/auth/forgot-password ─────────────────────────────────────────
+router.post('/forgot-password', async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email)
+      return res.status(400).json({ message: 'Vui lòng nhập email' });
+
+    const lowerEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: lowerEmail });
+
+    // Trả về thông báo chung để chống lộ thông tin người dùng (User Enumeration Protection)
+    const genericResponse = {
+      message: 'Nếu email tồn tại trên hệ thống, mã OTP đã được gửi tới email của bạn'
+    };
+
+    if (!user) {
+      return res.json(genericResponse);
+    }
+
+    // Rate Limiting / Anti-Spam: Giới hạn tối thiểu 60 giây giữa các lần yêu cầu OTP
+    const existingRecord = await PasswordReset.findOne({ email: lowerEmail });
+    if (existingRecord && existingRecord.updatedAt) {
+      const secondsSinceLastRequest = (Date.now() - new Date(existingRecord.updatedAt).getTime()) / 1000;
+      if (secondsSinceLastRequest < 60) {
+        return res.status(429).json({
+          message: `Vui lòng chờ ${Math.ceil(60 - secondsSinceLastRequest)} giây trước khi gửi lại mã`
+        });
+      }
+    }
+
+    const otp       = generateOTP();
+    const hashedOtp = hashOTP(otp);
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 phút
+
+    // Sử dụng findOneAndUpdate với upsert để phòng tránh Race Conditions
+    await PasswordReset.findOneAndUpdate(
+      { email: lowerEmail },
+      {
+        otp: hashedOtp,
+        expiresAt,
+        attempts: 0,
+        isVerified: false,
+        resetToken: null,
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Gửi Email OTP và bắt lỗi gián đoạn dịch vụ SMTP
+    try {
+      await sendResetPasswordOTPEmail(lowerEmail, otp);
+      console.log(`[SECURITY DEBUG] Reset Password OTP for ${lowerEmail}: ${otp}`);
+    } catch (mailErr) {
+      console.error('Lỗi dịch vụ gửi mail SMTP:', mailErr.message);
+    }
+
+    res.json(genericResponse);
+  } catch (err) {
+    console.error('forgot-password error:', err);
+    res.status(500).json({ message: 'Đã xảy ra lỗi hệ thống, vui lòng thử lại sau' });
+  }
+});
+
+// ─── POST /api/auth/verify-reset-otp ───────────────────────────────────────
+router.post('/verify-reset-otp', async (req, res) => {
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp)
+      return res.status(400).json({ message: 'Thiếu email hoặc mã OTP' });
+
+    const lowerEmail = email.toLowerCase().trim();
+    const record = await PasswordReset.findOne({ email: lowerEmail });
+    if (!record)
+      return res.status(400).json({ message: 'Không tìm thấy yêu cầu đặt lại mật khẩu' });
+
+    if (new Date() > record.expiresAt) {
+      await PasswordReset.deleteOne({ email: lowerEmail });
+      return res.status(400).json({ message: 'Mã OTP đã hết hạn, vui lòng yêu cầu gửi lại mã mới' });
+    }
+
+    if (record.attempts >= 5) {
+      await PasswordReset.deleteOne({ email: lowerEmail });
+      return res.status(400).json({ message: 'Quá nhiều lần nhập sai mã OTP, vui lòng thực hiện lại từ đầu' });
+    }
+
+    const hashedInputOtp = hashOTP(otp.trim());
+    if (record.otp !== hashedInputOtp) {
+      record.attempts += 1;
+      await record.save();
+      const remaining = 5 - record.attempts;
+      return res.status(400).json({ message: `Mã OTP không chính xác, còn ${remaining} lần thử` });
+    }
+
+    const resetToken = jwt.sign(
+      { email: lowerEmail, purpose: 'password_reset' },
+      process.env.JWT_SECRET,
+      { expiresIn: '10m' }
+    );
+
+    record.isVerified = true;
+    record.resetToken = resetToken;
+    await record.save();
+
+    res.json({ message: 'Xác thực OTP thành công', resetToken });
+  } catch (err) {
+    console.error('verify-reset-otp error:', err);
+    res.status(500).json({ message: 'Lỗi xác thực OTP, vui lòng thử lại' });
+  }
+});
+
+// ─── POST /api/auth/reset-password ──────────────────────────────────────────
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { email, resetToken, newPassword } = req.body;
+    if (!email || !resetToken || !newPassword)
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ thông tin' });
+
+    // Kiểm tra chính sách mật khẩu an toàn (Min length 6, kết hợp cả chữ cái & chữ số)
+    if (newPassword.length < 6)
+      return res.status(400).json({ message: 'Mật khẩu mới phải có ít nhất 6 ký tự' });
+
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    if (!hasLetter || !hasNumber) {
+      return res.status(400).json({ message: 'Mật khẩu mới phải bao gồm cả chữ cái và chữ số' });
+    }
+
+    const lowerEmail = email.toLowerCase().trim();
+
+    let decoded;
+    try {
+      decoded = jwt.verify(resetToken, process.env.JWT_SECRET);
+    } catch {
+      return res.status(400).json({ message: 'Phiên làm việc đã hết hạn, vui lòng thực hiện lại từ đầu' });
+    }
+
+    if (decoded.purpose !== 'password_reset' || decoded.email !== lowerEmail) {
+      return res.status(400).json({ message: 'Mã token khôi phục không hợp lệ' });
+    }
+
+    const record = await PasswordReset.findOne({
+      email: lowerEmail,
+      resetToken,
+      isVerified: true,
+    });
+    if (!record) {
+      return res.status(400).json({ message: 'Yêu cầu không hợp lệ hoặc đã hết hạn' });
+    }
+
+    const user = await User.findOne({ email: lowerEmail });
+    if (!user) {
+      return res.status(404).json({ message: 'Không tìm thấy người dùng' });
+    }
+
+    user.password = newPassword; // sẽ tự hash trong userSchema.pre('save')
+    await user.save();
+
+    await PasswordReset.deleteOne({ email: lowerEmail });
+
+    res.json({ message: 'Đặt lại mật khẩu thành công! Vui lòng đăng nhập bằng mật khẩu mới.' });
+  } catch (err) {
+    console.error('reset-password error:', err);
+    res.status(500).json({ message: 'Lỗi đặt lại mật khẩu, vui lòng thử lại' });
   }
 });
 

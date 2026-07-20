@@ -212,10 +212,10 @@ export default function FriendList({ onSelectDM }) {
         <div className="flex-1 overflow-y-auto hide-scrollbar p-6 flex flex-col gap-4 bg-white">
           <div>
             <h3 className="text-sm font-bold text-gray-900 mb-1">Thêm bạn mới</h3>
-            <p className="text-xs text-gray-500 mb-3">Tìm kiếm bạn bè bằng tên tài khoản trên hệ thống.</p>
+            <p className="text-xs text-gray-500 mb-3">Tìm kiếm bạn bè bằng tên hiển thị trên hệ thống.</p>
             <input
               className="bg-[#f0f2f5] border border-transparent rounded-full px-4 py-2.5 text-sm text-black placeholder-gray-500 focus:outline-none focus:bg-white focus:border-gray-300 w-full"
-              placeholder="Nhập tên tài khoản của họ..."
+              placeholder="tìm ai đó"
               value={searchQ}
               onChange={handleSearch}
             />
